@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import os
 
 # Permissions setup
 intents = discord.Intents.default()
@@ -18,10 +19,10 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    if message.channel.name == TARGET_CHANNEL_NAME:
+    if message.channel.name == "mods":
         await message.channel.send("Meow! I'm watching this channel! 🐾")
 
     await bot.process_commands(message)
 
 # Put your secret token between the quotes below
-bot.run('MTQ5OTkxMDMyMzcyNDA5MTQ1Mw.GxT2HV.nG59K91co2gPPIb8_8y17AM7Xx9e8_4DDck77o')
+bot.run(os.environ.get('DMTQ5OTkxMDMyMzcyNDA5MTQ1Mw.GSnXul.79n6l8j7BmqermaHZlJRGVSTeUjJMtL5X8Qt3cN'))
