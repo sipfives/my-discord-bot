@@ -10,18 +10,16 @@ intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# 2. Configuration
-# These will DELETE previous messages
-CLEAN_CHANNELS = {
-    "﹒s﹒scαmmers": "only post real scammers. youll be warned if you send any nsfw messages.",
-    "﹒╭✿，selfie﹒୭": "catfishing = ban <3"
+# 2. Configuration (All IDs are now set!)
+# Group 1: CLEAN (Deletes previous message)
+CLEAN_CHANNEL_IDS = {
+    1484730031048491049: "only post real scammers. youll be warned if you send any nsfw messages.",
+    1483988599337783448: "catfishing = ban <3"
 }
 
-# These will STACK messages (GIFs/Photos)
-# Added the Forum name "୨୧ . persona" here so she works in those posts!
-LOG_CHANNELS = {
-    "✿︵vanity﹒﹒୧﹒": "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
-    "୨୧ . persona": "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
+# Group 2: LOG (Stacks GIFs)
+LOG_CHANNEL_IDS = {
+    1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 }
 
 STATUS_ROLE_NAME = "pic"
@@ -71,31 +69,32 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # LOGIC: Check if we are in a channel or a thread/forum post
-    channel_name = message.channel.name
-    parent_name = ""
-    if isinstance(message.channel, discord.Thread) and message.channel.parent:
-        parent_name = message.channel.parent.name
+    # Identify the current channel ID and the parent ID (for Forum posts)
+    current_id = message.channel.id
+    parent_id = message.channel.parent_id if hasattr(message.channel, 'parent_id') else None
 
-    # Check CLEAN group (Channel name or Parent name)
-    if channel_name in CLEAN_CHANNELS or parent_name in CLEAN_CHANNELS:
-        target_key = channel_name if channel_name in CLEAN_CHANNELS else parent_name
-        custom_msg = CLEAN_CHANNELS[target_key]
+    # Check CLEAN group (Scammers & Catfishing)
+    target_clean_id = None
+    if current_id in CLEAN_CHANNEL_IDS: target_clean_id = current_id
+    elif parent_id in CLEAN_CHANNEL_IDS: target_clean_id = parent_id
+
+    if target_clean_id:
+        custom_msg = CLEAN_CHANNEL_IDS[target_clean_id]
         async for old_msg in message.channel.history(limit=50):
             if old_msg.author == bot.user and old_msg.content == custom_msg:
-                try:
-                    await old_msg.delete()
-                    break 
+                try: await old_msg.delete(); break 
                 except: pass 
         await message.channel.send(custom_msg)
+        return
 
-    # Check LOG group (Channel name or Parent name)
-    elif channel_name in LOG_CHANNELS or parent_name in LOG_CHANNELS:
-        target_key = channel_name if channel_name in LOG_CHANNELS else parent_name
-        custom_msg = LOG_CHANNELS[target_key]
-        await message.channel.send(custom_msg)
+    # Check LOG group (Persona Forum)
+    target_log_id = None
+    if current_id in LOG_CHANNEL_IDS: target_log_id = current_id
+    elif parent_id in LOG_CHANNEL_IDS: target_log_id = parent_id
+
+    if target_log_id:
+        await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
     
     await bot.process_commands(message)
 
-# 6. Start the Bot
 bot.run(os.environ.get('DISCORD_TOKEN'))
