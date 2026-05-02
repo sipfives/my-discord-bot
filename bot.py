@@ -32,7 +32,6 @@ CLEAN_CHANNEL_IDS = {
     1483988599337783448: "catfishing = ban <3"
 }
 
-# FIXED: Added the missing comma here!
 LOG_CHANNEL_IDS = {
     1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
     1499947145296351242: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
@@ -55,7 +54,7 @@ class TipsView(discord.ui.View):
         selection = select.values[0]
         embeds = []
         if selection == "help":
-            e1 = discord.Embed(title="profile set up!", color=HELP_HEX, description="your profile is the first thing that attracts anybody! we urge you all to stay AWAY from profiles that are suggestive, or look \"ageplayer\" like. you will be banned, not just from our server, but others. pick a modest, colorful, gothic, cute core, or decent profile picture, depending on your personality type! (you can find profile inspo in [vanity](https://discord.com/channels/1483873672208056511/1499947145296351242) and [persona](https://discord.com/channels/1483873672208056511/1499948539424411863)")
+            e1 = discord.Embed(title="profile set up!", color=HELP_HEX, description="your profile is the first thing that attracts anybody! we urge you all to stay AWAY from profiles that are suggestive, or look \"ageplayer\" like. you will be banned, not just from our server, but others. pick a modest, colorful, gothic, cute core, or decent profile picture, depending on your personality type! (you can find profile inspo in [vanity](https://discord.com/channels/1483873672208056511/1499947145296351242) and [persona](https://discord.com/channels/1483873672208056511/1499948539424411863))")
             e2 = discord.Embed(title="finding servers", color=HELP_HEX, description="we specifically target ask2dm servers, as they have a wide variety of people. we recommend you keep your dms turned on and allow server dms to recieve dms. we provide servers in <#1483873673692581982>\n\nonce you join these servers, complete set up and head over to the intros channels they provide and paste an intro!\n\nonce done, head over to their ask-to-dm channels and send a message. the message must include gender, age, and any extra message after (optional)\nformat f(age) dms open for anything!")
             e3 = discord.Embed(title="finding the right person", color=HELP_HEX, description="you may get multiple dms. it is heavily suggested that you do not open all at once! your account will be flagged for spam and you won't be able to accept message requests! finding the right person may be hard, but keep your chin up! never respond to any NSFW messages asking you to show anything inappropriate, or anything suggesting you show anything inappropriate \"for a price.\" block them. if so!")
             e4 = discord.Embed(title="getting the bag!", color=HELP_HEX, description="this will take some time! results arent fast. in order to receive payments, its recommended that you request they pay via gift cards if you do not want to give them your personal pay accounts. you can use cash app, paypal, zelle, etc! if you don't have USD, you can use gift cards as well!\n\nsend an amazon link to whatever gift card you prefer!")
@@ -96,7 +95,6 @@ class TicketView(discord.ui.View):
 
         channel = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=category, overwrites=overwrites)
         
-        # Initial Messages
         embed1 = discord.Embed(description=f"🐾 **help needed for ekitten**\n\nHi {interaction.user.mention}! Please describe your issue or question here.", color=HELP_HEX)
         await channel.send(embed=embed1)
         
@@ -231,7 +229,7 @@ async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
 async def timeout(ctx, member: discord.Member, time: str, *, reason="No reason provided"):
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     unit = time[-1]
-    if unit not in time_dict: return await ctx.send("🐾 Use 10m, 1h, etc!")
+    if unit not in time_dict: return await ctx.send("🐾 Use a valid time (10m, 1h, etc)!")
     seconds = int(time[:-1]) * time_dict[unit]
     duration = datetime.timedelta(seconds=seconds)
     embed = discord.Embed(title=f"Meow! Time out!", color=HELP_HEX)
@@ -294,7 +292,14 @@ async def giveaway(ctx, duration: str, *, prize: str):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def testboost(ctx):
-    await ctx.send(f"<:xx_blank1308798611726794793:1500174266396704875> \n                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n                  . . ͡  ɞ {ctx.author.mention}")
+    boost_msg = (
+        "<:xx_blank1308798611726794793:1500174266396704875> \n"
+        "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
+        "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
+        "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
+        f"                  . . ͡  ɞ {ctx.author.mention}"
+    )
+    await ctx.send(boost_msg)
 
 # --- EVENTS ---
 @bot.event
