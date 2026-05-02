@@ -11,12 +11,18 @@ intents.presences = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 2. Configuration
-# FORMAT: "channel-name": "Message you want"
-# TIP: Copy the name exactly as it appears in the channel header!
-WATCHED_CHANNELS = {
-    "﹒s﹒scαmmers": "only post actual scammers. do not post nsfw messages here!",
-    "﹒╭✿，selfie﹒୭": "catfishing is a ban <3"
-    "𝟅ϱ﹒persona": "https://media.discordapp.net/attachments/1200093733140561941/1240749634079690877/A83CA8AD-E686-4D1A-B249-165287F5C00F.gif?ex=69f6fae4&is=69f5a964&hm=5f72ce4343aa42e67dd149c62d70683d3b36eaae58a8fc0d1d15e70bef851f66&=&width=1150&height=146"
+# Group 1: These channels will DELETE the previous message to stay clean
+# Paste your decorated names exactly as they appear in Discord!
+CLEAN_CHANNELS = {
+    "﹒s﹒scαmmers": "only post real scammers. youll be warned if you send any nsfw messages.",
+    "﹒╭✿，selfie﹒୭": "catfishing = ban <3"
+}
+
+# Group 2: These channels will NOT delete messages (they will stack up)
+# You can use text OR a direct link to a GIF/Photo here
+LOG_CHANNELS = {
+    "✿︵vanity﹒﹒୧﹒": "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
+    "𝟅ϱ﹒persona": "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 }
 
 STATUS_ROLE_NAME = "pic"
@@ -30,27 +36,41 @@ async def check_pinkie_status():
         if not role: continue
         for member in guild.members:
             if member.bot: continue
+            
+            # Check for the custom status text
             has_status = False
             for activity in member.activities:
                 if isinstance(activity, discord.CustomActivity):
                     if activity.name and STATUS_TRIGGER in activity.name.lower():
                         has_status = True
+            
+            # Logic to add/remove the 'pic' role
             if has_status and role not in member.roles:
-                try: await member.add_roles(role)
+                try: 
+                    await member.add_roles(role)
+                    print(f"Added role to {member.name}")
                 except: pass
             elif not has_status and role in member.roles:
-                try: await member.remove_roles(role)
+                try: 
+                    await member.remove_roles(role)
+                    print(f"Removed role from {member.name}")
                 except: pass
 
-# 4. COMMAND: In Role
+# 4. COMMAND: In Role (Baby Pink & Pings)
 @bot.command()
 async def inrole(ctx, *, role: discord.Role):
     members = role.members
     if not members:
         await ctx.send(f"No one has the **{role.name}** role yet!")
         return
+
     member_pings = "\n".join([f"• <@{m.id}>" for m in members])
-    embed = discord.Embed(title=f"Members with {role.name}", description=member_pings, color=0xFFB6C1)
+    
+    embed = discord.Embed(
+        title=f"Members with {role.name}",
+        description=member_pings,
+        color=0xFFB6C1 # Baby Pink
+    )
     embed.set_footer(text=f"Total: {len(members)}")
     await ctx.send(embed=embed)
 
@@ -66,11 +86,11 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # Check if the channel name is one of our keys in WATCHED_CHANNELS
-    if message.channel.name in WATCHED_CHANNELS:
-        custom_msg = WATCHED_CHANNELS[message.channel.name]
-        
-        # CLEANUP: Delete the previous custom message for THIS channel
+    channel_name = message.channel.name
+
+    # Check CLEAN group (Delete previous version of the specific message)
+    if channel_name in CLEAN_CHANNELS:
+        custom_msg = CLEAN_CHANNELS[channel_name]
         async for old_msg in message.channel.history(limit=50):
             if old_msg.author == bot.user and old_msg.content == custom_msg:
                 try:
@@ -78,10 +98,15 @@ async def on_message(message):
                     break 
                 except:
                     pass 
-        
-        # Send the fresh custom message
+        await message.channel.send(custom_msg)
+
+    # Check LOG group (Stacking messages / GIFs)
+    elif channel_name in LOG_CHANNELS:
+        custom_msg = LOG_CHANNELS[channel_name]
         await message.channel.send(custom_msg)
     
+    # Process commands like !inrole
     await bot.process_commands(message)
 
+# 6. Start the Bot
 bot.run(os.environ.get('DISCORD_TOKEN'))
