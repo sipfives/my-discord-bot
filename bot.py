@@ -15,7 +15,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # TIP: Copy the name exactly as it appears in the channel header!
 WATCHED_CHANNELS = {
     "﹒s﹒scαmmers": "only post actual scammers. do not post nsfw messages here!",
-    "﹒╭✿，selfie﹒୭": "I love seeing your faces! 📸"
+    "﹒╭✿，selfie﹒୭": "catfishing is a ban <3"
 }
 
 STATUS_ROLE_NAME = "pic"
