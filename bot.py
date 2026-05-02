@@ -16,6 +16,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 WATCHED_CHANNELS = {
     "﹒s﹒scαmmers": "only post actual scammers. do not post nsfw messages here!",
     "﹒╭✿，selfie﹒୭": "catfishing is a ban <3"
+    "𝟅ϱ﹒persona": "https://media.discordapp.net/attachments/1200093733140561941/1240749634079690877/A83CA8AD-E686-4D1A-B249-165287F5C00F.gif?ex=69f6fae4&is=69f5a964&hm=5f72ce4343aa42e67dd149c62d70683d3b36eaae58a8fc0d1d15e70bef851f66&=&width=1150&height=146"
 }
 
 STATUS_ROLE_NAME = "pic"
