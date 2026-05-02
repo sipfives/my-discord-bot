@@ -128,7 +128,7 @@ class TipsView(discord.ui.View):
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
-# --- BACKGROUND TASK: Status Role ---
+# --- BACKGROUND TASK: Status Role (FIXED) ---
 @tasks.loop(seconds=30)
 async def check_pinkie_status():
     for guild in bot.guilds:
@@ -136,8 +136,15 @@ async def check_pinkie_status():
         if not role: continue
         for member in guild.members:
             if member.bot: continue
-            custom_status = next((a.name for a in member.activities if isinstance(a, discord.CustomActivity)), None)
-            has_trigger = custom_status and STATUS_TRIGGER in custom_status.lower()
+            has_trigger = False
+            for activity in member.activities:
+                if isinstance(activity, discord.CustomActivity):
+                    status_text = ""
+                    if activity.name: status_text += activity.name.lower()
+                    if activity.state: status_text += activity.state.lower()
+                    if STATUS_TRIGGER in status_text:
+                        has_trigger = True
+                        break
             if has_trigger and role not in member.roles:
                 try: await member.add_roles(role)
                 except: pass
@@ -149,27 +156,39 @@ async def check_pinkie_status():
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.role [user] [name]` | `.inrole [role]` | `.testboost` | `.setuptips` | `.setup_ticket` ", inline=False)
+    embed.description = "🐾 **Welcome to the Kitten Paradise help menu!**\nUse the commands below to manage the server. meow!"
+    embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.role [user] [role]` | `.inrole [role]` | `.testboost` | `.setuptips` | `.setup_ticket` ", inline=False)
     embed.add_field(name="🖼️ **Profile**", value="`.av` | `.sav` | `.banner` | `.sbanner` | `.guildbanner` ", inline=False)
     embed.add_field(name="🔨 **Moderation**", value="`.ban [user] [reason]` | `.kick [user] [reason]` | `.timeout [user] [time] [reason]` ", inline=False)
+    embed.set_footer(text="chocolα - kitten paradise")
     await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(manage_roles=True)
+async def role(ctx, member: discord.Member, *, search: str):
+    role_id = search.replace("<@&", "").replace(">", "")
+    if role_id.isdigit():
+        role = ctx.guild.get_role(int(role_id))
+    else:
+        role = discord.utils.find(lambda r: search.lower() in r.name.lower(), ctx.guild.roles)
+    if role is None:
+        return await ctx.send(f"🐾 I couldn't find any role matching **{search}**!")
+    try:
+        if role in member.roles:
+            await member.remove_roles(role)
+            await ctx.send(embed=discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK))
+        else:
+            await member.add_roles(role)
+            await ctx.send(embed=discord.Embed(description=f"🐾 Added **{role.name}** to {member.mention}", color=BABY_PINK))
+    except discord.Forbidden:
+        await ctx.send("🐾 I can't manage that role! Check my role position. meow")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def setup_ticket(ctx):
     channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
     await channel.send(DIVIDER_IMAGE)
-    embed = discord.Embed(color=HELP_HEX)
-    embed.description = (
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd <#1484554927794819232> before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568> click button to mαke α ticket!<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
-    )
-    embed.set_footer(text="chocolα - narko mαde me!")
+    embed = discord.Embed(description="🐾 click button to mαke α ticket!", color=HELP_HEX)
     await channel.send(embed=embed, view=TicketView())
     await ctx.send("🐾 Ticket setup complete!")
 
@@ -178,15 +197,7 @@ async def setup_ticket(ctx):
 async def setuptips(ctx):
     channel = bot.get_channel(TIPS_CHANNEL_ID)
     await channel.send(DIVIDER_IMAGE)
-    embed = discord.Embed(color=HELP_HEX)
-    embed.description = (
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875>**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness<:xx_blank1308798611726794793:1500174266396704875>**\n\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>use drop down menu below\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
-    )
+    embed = discord.Embed(description="🐾 use drop down menu below", color=HELP_HEX)
     await channel.send(embed=embed, view=TipsView())
     await ctx.send("🐾 Staff tips sent!")
 
@@ -194,102 +205,54 @@ async def setuptips(ctx):
 @commands.has_permissions(manage_messages=True)
 async def purge(ctx, amount: int):
     deleted = await ctx.channel.purge(limit=amount + 1)
-    confirm = await ctx.send(f"🐾 successfully purged **{len(deleted)-1}** messages! meow")
+    confirm = await ctx.send(f"🐾 successfully purged **{len(deleted)-1}** messages!")
     await asyncio.sleep(3); await confirm.delete()
-
-@bot.command()
-@commands.has_permissions(manage_roles=True)
-async def role(ctx, member: discord.Member, *, search: str):
-    role = discord.utils.find(lambda r: search.lower() in r.name.lower(), ctx.guild.roles)
-    if role is None: return await ctx.send(f"🐾 I couldn't find any role containing **{search}**!")
-    if role in member.roles:
-        await member.remove_roles(role)
-        await ctx.send(embed=discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK))
-    else:
-        await member.add_roles(role)
-        await ctx.send(embed=discord.Embed(description=f"🐾 Added **{role.name}** to {member.mention}", color=BABY_PINK))
-
-@bot.command()
-async def inrole(ctx, *, role: discord.Role):
-    members = role.members
-    if not members: return await ctx.send(f"🐾 No one has the **{role.name}** role yet!")
-    pings = "\n".join([f"• {m.mention}" for m in members])
-    if len(pings) > 2000: pings = pings[:1990] + "\n..."
-    await ctx.send(embed=discord.Embed(title=f"Members with {role.name}", description=pings, color=BABY_PINK))
 
 @bot.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
-    embed = discord.Embed(title=f"<a:000kitty:1484802888122503178> Meow! You've been Banned", color=HELP_HEX)
+    embed = discord.Embed(title="<a:000kitty:1484802888122503178> Banned from Kitten Paradise", color=HELP_HEX)
     embed.add_field(name="🐾 Reason:", value=reason, inline=False)
-    dm_sent = True
     try: await member.send(embed=embed)
-    except: dm_sent = False
+    except: pass
     await member.ban(reason=reason)
-    await ctx.send(f"🐾 **{member.name}** banned. meow!" + ("" if dm_sent else "\n⚠️ *DMs closed.*"))
+    await ctx.send(f"🐾 **{member.name}** has been banned. meow!")
 
 @bot.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
-    embed = discord.Embed(title=f"<a:000kitty:1484802888122503178> Meow! You've been kicked", color=HELP_HEX)
+    embed = discord.Embed(title="<a:000kitty:1484802888122503178> Kicked from Kitten Paradise", color=HELP_HEX)
     embed.add_field(name="🐾 Reason:", value=reason, inline=False)
-    dm_sent = True
     try: await member.send(embed=embed)
-    except: dm_sent = False
+    except: pass
     await member.kick(reason=reason)
-    await ctx.send(f"🐾 **{member.name}** kicked. meow!" + ("" if dm_sent else "\n⚠️ *DMs closed.*"))
+    await ctx.send(f"🐾 **{member.name}** has been kicked.")
 
 @bot.command()
 @commands.has_permissions(moderate_members=True)
 async def timeout(ctx, member: discord.Member, time: str, *, reason="No reason provided"):
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    unit = time[-1]
-    if unit not in time_dict: return await ctx.send("🐾 Use a valid time (10m, 1h, etc)!")
-    seconds = int(time[:-1]) * time_dict[unit]
-    duration = datetime.timedelta(seconds=seconds)
-    embed = discord.Embed(title=f"Meow! Time out!", color=HELP_HEX)
+    duration = datetime.timedelta(seconds=int(time[:-1]) * time_dict[time[-1]])
+    embed = discord.Embed(title="Time Out", color=HELP_HEX)
     embed.add_field(name="🐾 Duration:", value=time, inline=False)
     embed.add_field(name="🐾 Reason:", value=reason, inline=False)
-    dm_sent = True
     try: await member.send(embed=embed)
-    except: dm_sent = False
+    except: pass
     await member.timeout(duration, reason=reason)
-    await ctx.send(f"🐾 **{member.name}** timed out." + ("" if dm_sent else "\n⚠️ *DMs closed.*"))
+    await ctx.send(f"🐾 **{member.name}** timed out.")
 
 @bot.command(aliases=['avatar'])
 async def av(ctx, member: discord.Member = None):
     member = member or ctx.author
     url = member.avatar.url if member.avatar else member.default_avatar.url
-    embed = discord.Embed(title=f"🐾 {member.name}'s Avatar", color=BABY_PINK)
-    embed.set_image(url=url); await ctx.send(embed=embed)
-
-@bot.command(aliases=['serveravatar'])
-async def sav(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    url = member.guild_avatar.url if member.guild_avatar else member.display_avatar.url
-    embed = discord.Embed(title=f"🐾 {member.name}'s Server Avatar", color=BABY_PINK)
-    embed.set_image(url=url); await ctx.send(embed=embed)
+    await ctx.send(embed=discord.Embed(title=f"🐾 {member.name}'s Avatar", color=BABY_PINK).set_image(url=url))
 
 @bot.command()
-async def banner(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    user = await bot.fetch_user(member.id)
-    if not user.banner: return await ctx.send("🐾 No banner!")
-    embed = discord.Embed(title=f"🐾 {member.name}'s Banner", color=BABY_PINK)
-    embed.set_image(url=user.banner.url); await ctx.send(embed=embed)
-
-@bot.command(aliases=['serverbanner'])
-async def sbanner(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    if not member.banner: return await ctx.send("🐾 No server banner!")
-    embed = discord.Embed(title=f"🐾 {member.name}'s Server Banner", color=BABY_PINK)
-    embed.set_image(url=member.banner.url); await ctx.send(embed=embed)
-
-@bot.command()
-async def guildbanner(ctx):
-    if not ctx.guild.banner: return await ctx.send("🐾 No banner!")
-    embed = discord.Embed(title=f"🐾 {ctx.guild.name}'s Banner", color=BABY_PINK)
-    embed.set_image(url=ctx.guild.banner.url); await ctx.send(embed=embed)
+async def inrole(ctx, *, role: discord.Role):
+    members = role.members
+    if not members: return await ctx.send("🐾 No one has that role!")
+    pings = "\n".join([f"• {m.mention}" for m in members[:50]])
+    await ctx.send(embed=discord.Embed(title=f"Members with {role.name}", description=pings, color=BABY_PINK))
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -314,14 +277,13 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user: return
     current_id = message.channel.id
-    parent_id = getattr(message.channel, "parent_id", None)
-    if current_id in CLEAN_CHANNEL_IDS or parent_id in CLEAN_CHANNEL_IDS:
-        custom_msg = CLEAN_CHANNEL_IDS.get(current_id) or CLEAN_CHANNEL_IDS.get(parent_id)
+    if current_id in CLEAN_CHANNEL_IDS:
+        custom_msg = CLEAN_CHANNEL_IDS[current_id]
         async for old in message.channel.history(limit=10):
             if old.author == bot.user and old.content == custom_msg: await old.delete(); break
         await message.channel.send(custom_msg); return
-    if current_id in LOG_CHANNEL_IDS or parent_id in LOG_CHANNEL_IDS:
-        await message.channel.send(LOG_CHANNEL_IDS.get(current_id) or LOG_CHANNEL_IDS.get(parent_id))
+    if current_id in LOG_CHANNEL_IDS:
+        await message.channel.send(LOG_CHANNEL_IDS[current_id])
     await bot.process_commands(message)
 
 bot.run(os.environ.get('DISCORD_TOKEN'))
