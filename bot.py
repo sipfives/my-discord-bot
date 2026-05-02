@@ -59,8 +59,20 @@ async def check_pinkie_status():
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.testboost` - Test the boost message layout.", inline=False)
+    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.role [user] [role]` - Adds or removes a role from someone.\n`.testboost` - Test the boost message layout.", inline=False)
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
+    await ctx.send(embed=embed)
+
+# NEW: Role Add/Remove Toggle Command
+@bot.command()
+@commands.has_permissions(manage_roles=True)
+async def role(ctx, member: discord.Member, *, role: discord.Role):
+    if role in member.roles:
+        await member.remove_roles(role)
+        embed = discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK)
+    else:
+        await member.add_roles(role)
+        embed = discord.Embed(description=f"🐾 Added **{role.name}** to {member.mention}", color=BABY_PINK)
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -76,7 +88,6 @@ async def inrole(ctx, *, role: discord.Role):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def testboost(ctx):
-    # This uses YOUR exact spacing from the prompt
     boost_msg = (
         "<:xx_blank1308798611726794793:1500174266396704875> \n"
         "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
