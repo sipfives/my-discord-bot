@@ -14,7 +14,21 @@ intents.moderation = True
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
 # 2. Configuration
+CLEAN_CHANNEL_IDS = {
+    1484730031048491049: "only post real scammers. youll be warned if you send any nsfw messages.",
+    1483988599337783448: "catfishing = ban <3"
+}
+
+LOG_CHANNEL_IDS = {
+    1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
+    1499947145296351242: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
+}
+
+BOOST_CHANNEL_ID = 1484728025059819611 
 TIPS_CHANNEL_ID = 1484554927794819232
+STATUS_ROLE_NAME = "pic"
+STATUS_TRIGGER = "/pinkie"
+BABY_PINK = 0xFFB6C1
 HELP_HEX = 0xFFD4F4 
 DIVIDER_IMAGE = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png?ex=69f79581&is=69f64401&hm=92badebe6ac0febaa25412e7128172c6b436d6210314c34f04275d4c48b8e8d2&=&format=webp&quality=lossless&width=2560&height=722"
 
@@ -59,15 +73,27 @@ class TipsView(discord.ui.View):
 
 # 3. COMMANDS
 @bot.command()
+async def help(ctx):
+    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
+    embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.inrole [role]` | `.role [user] [name]` | `.testboost`", inline=False)
+    embed.add_field(name="🖼️ **Profile**", value="`.av` | `.sav` | `.banner` | `.sbanner` | `.guildbanner`", inline=False)
+    embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` | `.reroll [msg_id]`", inline=False)
+    await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def purge(ctx, amount: int):
+    deleted = await ctx.channel.purge(limit=amount + 1)
+    confirm = await ctx.send(f"🐾 successfully purged **{len(deleted)-1}** messages! meow")
+    await asyncio.sleep(3)
+    await confirm.delete()
+
+@bot.command()
 @commands.has_permissions(administrator=True)
 async def setuptips(ctx):
     channel = bot.get_channel(TIPS_CHANNEL_ID)
     if not channel: return await ctx.send("🐾 I couldn't find the channel!")
-
-    # The Divider Image
     await channel.send(DIVIDER_IMAGE)
-    
-    # The Main Embed
     embed = discord.Embed(color=HELP_HEX)
     embed.description = (
         "<:xx_blank1308798611726794793:1500174266396704875>\n"
@@ -77,15 +103,46 @@ async def setuptips(ctx):
         "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
         "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
     )
-    
     await channel.send(embed=embed, view=TipsView())
-    await ctx.send("🐾 Help system updated!")
+    await ctx.send("🐾 Help system sent!")
 
-# [KEEP ALL YOUR OTHER EVENTS AND COMMANDS HERE]
+# --- [ADD YOUR OTHER COMMANDS (av, role, inrole, giveaway, etc) HERE] ---
+
+# 5. EVENTS
+@tasks.loop(seconds=30)
+async def check_pinkie_status():
+    # [Keep your status role loop logic here]
+    pass
 
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
     bot.add_view(TipsView())
+    if not check_pinkie_status.is_running():
+        check_pinkie_status.start()
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user: return
+    current_id = message.channel.id
+    parent_id = getattr(message.channel, "parent_id", None)
+    
+    # 1. Cleaner/Log GIF logic
+    target_clean_id = current_id if current_id in CLEAN_CHANNEL_IDS else parent_id if parent_id in CLEAN_CHANNEL_IDS else None
+    if target_clean_id:
+        custom_msg = CLEAN_CHANNEL_IDS[target_clean_id]
+        async for old_msg in message.channel.history(limit=10):
+            if old_msg.author == bot.user and old_msg.content == custom_msg:
+                try: await old_msg.delete(); break 
+                except: pass 
+        await message.channel.send(custom_msg)
+        return
+    
+    target_log_id = current_id if current_id in LOG_CHANNEL_IDS else parent_id if parent_id in LOG_CHANNEL_IDS else None
+    if target_log_id: 
+        await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
+    
+    # CRITICAL: This line allows commands like .purge to work!
+    await bot.process_commands(message)
 
 bot.run(os.environ.get('DISCORD_TOKEN'))
