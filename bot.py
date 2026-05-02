@@ -12,7 +12,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 2. Configuration
 # Add your channel names here!
-WATCHED_CHANNELS = ["mods"] 
+WATCHED_CHANNELS = ["﹒╭✿，selfie﹒୭"] 
 STATUS_ROLE_NAME = "pic"
 STATUS_TRIGGER = "/pinkie"
 
@@ -64,7 +64,7 @@ async def on_message(message):
     if message.channel.name in WATCHED_CHANNELS:
         # CLEANUP: Find and delete the bot's last "watching" message
         async for old_msg in message.channel.history(limit=50):
-            if old_msg.author == bot.user and old_msg.content == "Meow! I'm watching this channel! 🐾":
+            if old_msg.author == bot.user and old_msg.content == "catfishing = ban":
                 try:
                     await old_msg.delete()
                     break 
@@ -72,7 +72,7 @@ async def on_message(message):
                     pass 
         
         # Send the fresh meow
-        await message.channel.send("Meow! I'm watching this channel! 🐾")
+        await message.channel.send("catfishing = ban")
     
     # Allows the !inrole command to work
     await bot.process_commands(message)
