@@ -42,7 +42,6 @@ async def check_pinkie_status():
                 if isinstance(activity, discord.CustomActivity):
                     if activity.name and STATUS_TRIGGER in activity.name.lower():
                         has_status = True
-            
             if has_status and role not in member.roles:
                 try: await member.add_roles(role)
                 except: pass
@@ -61,16 +60,18 @@ async def check_pinkie_status():
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
     embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.inrole [role]` | `.role [user] [name]` | `.testboost`", inline=False)
-    embed.add_field(name="🖼️ **Profile**", value="`.av` / `.sav` - View Avatar / Server Avatar\n`.banner` / `.sbanner` - View Banner / Server Banner", inline=False)
+    embed.add_field(name="🖼️ **Profile**", value="`.av` - User Avatar\n`.sav` - Server Avatar\n`.banner` - User Banner\n`.sbanner` - Server Profile Banner\n`.guildbanner` - Server's Banner", inline=False)
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` | `.reroll [msg_id]`", inline=False)
     await ctx.send(embed=embed)
 
-# --- AVATAR COMMANDS ---
+# --- FIXED AVATAR COMMANDS ---
 @bot.command(aliases=['avatar'])
 async def av(ctx, member: discord.Member = None):
     member = member or ctx.author
-    embed = discord.Embed(title=f"🐾 {member.name}'s Avatar", color=BABY_PINK)
-    embed.set_image(url=member.display_avatar.url)
+    # member.avatar pulls the GLOBAL avatar. If they don't have one, it pulls default.
+    url = member.avatar.url if member.avatar else member.default_avatar.url
+    embed = discord.Embed(title=f"🐾 {member.name}'s Global Avatar", color=BABY_PINK)
+    embed.set_image(url=url)
     await ctx.send(embed=embed)
 
 @bot.command(aliases=['serveravatar'])
@@ -81,22 +82,32 @@ async def sav(ctx, member: discord.Member = None):
     embed.set_image(url=url)
     await ctx.send(embed=embed)
 
-# --- BANNER COMMANDS ---
+# --- FIXED BANNER COMMANDS ---
 @bot.command()
 async def banner(ctx, member: discord.Member = None):
     member = member or ctx.author
-    user = await bot.fetch_user(member.id) # Fetching user is required to see banners
+    user = await bot.fetch_user(member.id)
     if not user.banner:
-        return await ctx.send("🐾 This user doesn't have a banner!")
-    embed = discord.Embed(title=f"🐾 {member.name}'s Banner", color=BABY_PINK)
+        return await ctx.send("🐾 This user doesn't have a global banner!")
+    embed = discord.Embed(title=f"🐾 {member.name}'s Global Banner", color=BABY_PINK)
     embed.set_image(url=user.banner.url)
     await ctx.send(embed=embed)
 
 @bot.command(aliases=['serverbanner'])
-async def sbanner(ctx):
+async def sbanner(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    # This fetches the member specifically for this guild to see their server profile
+    if not member.banner:
+        return await ctx.send("🐾 This user doesn't have a server-specific banner!")
+    embed = discord.Embed(title=f"🐾 {member.name}'s Server Profile Banner", color=BABY_PINK)
+    embed.set_image(url=member.banner.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def guildbanner(ctx):
     if not ctx.guild.banner:
-        return await ctx.send("🐾 This server doesn't have a banner yet!")
-    embed = discord.Embed(title=f"🐾 {ctx.guild.name}'s Server Banner", color=BABY_PINK)
+        return await ctx.send("🐾 This server doesn't have a banner!")
+    embed = discord.Embed(title=f"🐾 {ctx.guild.name}'s Banner", color=BABY_PINK)
     embed.set_image(url=ctx.guild.banner.url)
     await ctx.send(embed=embed)
 
