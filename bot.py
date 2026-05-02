@@ -9,7 +9,7 @@ intents = discord.Intents.default()
 intents.message_content = True  
 intents.members = True          
 intents.presences = True        
-intents.moderation = True # Needed to read Audit Logs
+intents.moderation = True 
 
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
@@ -23,57 +23,47 @@ LOG_CHANNEL_IDS = {
     1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 }
 
+BOOST_CHANNEL_ID = 1484728025059819611 
 STATUS_ROLE_NAME = "pic"
 STATUS_TRIGGER = "/pinkie"
 BABY_PINK = 0xFFB6C1
 
-# 3. BACKGROUND TASK: Audit-Log Status Checker
+# 3. BACKGROUND TASK: Status Checker (Audit Aware)
 @tasks.loop(seconds=30)
 async def check_pinkie_status():
     for guild in bot.guilds:
         role = discord.utils.get(guild.roles, name=STATUS_ROLE_NAME)
         if not role: continue
-        
         for member in guild.members:
             if member.bot: continue
-            
-            # Check current status
             has_status = False
             for activity in member.activities:
                 if isinstance(activity, discord.CustomActivity):
                     if activity.name and STATUS_TRIGGER in activity.name.lower():
                         has_status = True
             
-            # If they have the status but NOT the role -> Add it
             if has_status and role not in member.roles:
                 try: await member.add_roles(role)
                 except: pass
-            
-            # If they DON'T have the status but DO have the role -> CHECK AUDIT LOG
             elif not has_status and role in member.roles:
                 try:
-                    # Look at the most recent time this role was added to this specific member
-                    async for entry in guild.audit_logs(action=discord.AuditLogAction.member_role_update, limit=10):
+                    async for entry in guild.audit_logs(action=discord.AuditLogAction.member_role_update, limit=5):
                         if entry.target.id == member.id:
-                            # Check if the 'pic' role was added in this log entry
                             for r in entry.after.roles:
-                                if r.id == role.id:
-                                    # If the bot was the one who added it, the bot can remove it
-                                    if entry.user.id == bot.user.id:
-                                        await member.remove_roles(role)
-                                        print(f"Removed role from {member.name} (Bot-given)")
-                                    else:
-                                        # A human or other bot gave it, so we leave it alone!
-                                        print(f"Skipping {member.name} (Role was given by {entry.user.name})")
+                                if r.id == role.id and entry.user.id == bot.user.id:
+                                    await member.remove_roles(role)
                                     break
-                except Exception as e:
-                    print(f"Audit log error: {e}")
+                except: pass
 
 # 4. COMMANDS
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.", inline=False)
+    embed = discord.Embed(
+        title="🎀 **chocolα's help menu** 🎀", 
+        description="Here are the commands available for you, kitties!", 
+        color=BABY_PINK
+    )
+    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.testboost` - Test the boost message layout.", inline=False)
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
     embed.set_footer(text="Prefix: .")
     await ctx.send(embed=embed)
@@ -86,8 +76,19 @@ async def inrole(ctx, *, role: discord.Role):
         return
     member_pings = "\n".join([f"• <@{m.id}>" for m in members])
     embed = discord.Embed(title=f"Members with {role.name}", description=member_pings, color=BABY_PINK)
-    embed.set_footer(text=f"Total: {len(members)}")
     await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def testboost(ctx):
+    boost_msg = (
+        "‎\n"
+        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
+        ":xx_blank: ﹒**thank you for boosting**\n"
+        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:00misc:1492955070990389309>  :0000:   ֪ **kitten**\n"
+        f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. .ɞ˚‧{ctx.author.mention}"
+    )
+    await ctx.send(boost_msg)
 
 def convert_time(time_str):
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
@@ -131,6 +132,20 @@ async def on_ready():
     print(f'Logged in as {bot.user.name}')
     if not check_pinkie_status.is_running():
         check_pinkie_status.start()
+
+@bot.event
+async def on_member_update(before, after):
+    if before.premium_since is None and after.premium_since is not None:
+        channel = bot.get_channel(BOOST_CHANNEL_ID)
+        if channel:
+            boost_msg = (
+                "‎\n"
+                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
+                ":xx_blank: ﹒**thank you for boosting**\n"
+                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:00misc:1492955070990389309>  :0000:   ֪ **kitten**\n"
+                f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. .ɞ˚‧{after.mention}"
+            )
+            await channel.send(boost_msg)
 
 @bot.event
 async def on_message(message):
