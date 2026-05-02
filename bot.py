@@ -76,13 +76,13 @@ async def inrole(ctx, *, role: discord.Role):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def testboost(ctx):
-    # Updated with full raw IDs for perfect rendering
+    # This uses YOUR exact spacing from the prompt
     boost_msg = (
         "<:xx_blank1308798611726794793:1500174266396704875> \n"
-        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
+        "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
         "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
-        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:000paw:1486941220222664843>   ֪ __kitten__ ⑅\n"
-        f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. . ͡  ɞ {ctx.author.mention}"
+        "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
+        f"                  . . ͡  ɞ {ctx.author.mention}"
     )
     await ctx.send(boost_msg)
 
@@ -136,10 +136,10 @@ async def on_member_update(before, after):
         if channel:
             boost_msg = (
                 "<:xx_blank1308798611726794793:1500174266396704875> \n"
-                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
+                "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
                 "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
-                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:000paw:1486941220222664843>   ֪ __kitten__ ⑅\n"
-                f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. . ͡  ɞ {after.mention}"
+                "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
+                f"                  . . ͡  ɞ {after.mention}"
             )
             await channel.send(boost_msg)
 
