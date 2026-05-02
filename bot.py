@@ -58,24 +58,20 @@ async def check_pinkie_status():
 # 4. COMMANDS
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(
-        title="🎀 **chocolα's help menu** 🎀", 
-        description="Here are the commands available for you, kitties!", 
-        color=BABY_PINK
-    )
-    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.role [user] [role name]` - Adds or removes a role (no ping needed!).\n`.testboost` - Test the boost message layout.", inline=False)
+    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
+    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.role [user] [name]` - Toggles a role (ignores decor!).\n`.testboost` - Test the boost layout.", inline=False)
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
-    embed.set_footer(text="Prefix: .")
     await ctx.send(embed=embed)
 
-# UPDATED: Role Toggle Command (Search by Name)
+# UPDATED: Role Toggle Command (Smart Search)
 @bot.command()
 @commands.has_permissions(manage_roles=True)
-async def role(ctx, member: discord.Member, *, role_name: str):
-    role = discord.utils.get(ctx.guild.roles, name=role_name)
+async def role(ctx, member: discord.Member, *, search: str):
+    # This looks for any role that CONTAINs the text you typed (case-insensitive)
+    role = discord.utils.find(lambda r: search.lower() in r.name.lower(), ctx.guild.roles)
     
     if role is None:
-        await ctx.send(f"🐾 I couldn't find a role named **{role_name}**! Check the spelling and decor.")
+        await ctx.send(f"🐾 I couldn't find any role containing **{search}**!")
         return
 
     if role in member.roles:
