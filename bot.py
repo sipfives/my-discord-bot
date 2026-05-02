@@ -19,8 +19,9 @@ CLEAN_CHANNEL_IDS = {
     1483988599337783448: "catfishing = ban <3"
 }
 
+# UPDATED: Added your new thread ID here
 LOG_CHANNEL_IDS = {
-    1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
+    1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
     1499947145296351242: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 }
 
@@ -64,17 +65,13 @@ async def help(ctx):
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
     await ctx.send(embed=embed)
 
-# UPDATED: Role Toggle Command (Smart Search)
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, *, search: str):
-    # This looks for any role that CONTAINs the text you typed (case-insensitive)
     role = discord.utils.find(lambda r: search.lower() in r.name.lower(), ctx.guild.roles)
-    
     if role is None:
         await ctx.send(f"🐾 I couldn't find any role containing **{search}**!")
         return
-
     if role in member.roles:
         await member.remove_roles(role)
         embed = discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK)
@@ -167,6 +164,7 @@ async def on_message(message):
     if message.author == bot.user: return
     current_id = message.channel.id
     parent_id = getattr(message.channel, "parent_id", None)
+    
     target_clean_id = current_id if current_id in CLEAN_CHANNEL_IDS else parent_id if parent_id in CLEAN_CHANNEL_IDS else None
     if target_clean_id:
         custom_msg = CLEAN_CHANNEL_IDS[target_clean_id]
@@ -176,8 +174,11 @@ async def on_message(message):
                 except: pass 
         await message.channel.send(custom_msg)
         return
+    
     target_log_id = current_id if current_id in LOG_CHANNEL_IDS else parent_id if parent_id in LOG_CHANNEL_IDS else None
-    if target_log_id: await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
+    if target_log_id: 
+        await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
+    
     await bot.process_commands(message)
 
 bot.run(os.environ.get('DISCORD_TOKEN'))
