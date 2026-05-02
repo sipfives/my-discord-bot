@@ -14,7 +14,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # FORMAT: "channel-name": "Message you want"
 # TIP: Copy the name exactly as it appears in the channel header!
 WATCHED_CHANNELS = {
-    "mods": "Meow! Narko is so cute 🐾",
     "﹒s﹒scαmmers": "only post actual scammers. do not post nsfw messages here!",
     "﹒╭✿，selfie﹒୭": "I love seeing your faces! 📸"
 }
