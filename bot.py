@@ -58,14 +58,9 @@ async def check_pinkie_status():
 # 4. COMMANDS
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(
-        title="🎀 **chocolα's help menu** 🎀", 
-        description="Here are the commands available for you, kitties!", 
-        color=BABY_PINK
-    )
+    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
     embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.testboost` - Test the boost message layout.", inline=False)
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
-    embed.set_footer(text="Prefix: .")
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -81,11 +76,12 @@ async def inrole(ctx, *, role: discord.Role):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def testboost(ctx):
+    # Updated with full raw IDs for perfect rendering
     boost_msg = (
-        ":xx_blank1308798611726794793: \n"
-        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800:0ggoki::0ggoki~1: \n"
-        ":xx_blank1308798611726794793:     ﹒**thαnk you for boosting**\n"
-        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800:000paw:  :0000~1:   ֪ __kitten__ ⑅\n"
+        "<:xx_blank1308798611726794793:1500174266396704875> \n"
+        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
+        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:000paw:1486941220222664843>   ֪ __kitten__ ⑅\n"
         f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. . ͡  ɞ {ctx.author.mention}"
     )
     await ctx.send(boost_msg)
@@ -139,10 +135,10 @@ async def on_member_update(before, after):
         channel = bot.get_channel(BOOST_CHANNEL_ID)
         if channel:
             boost_msg = (
-                ":xx_blank1308798611726794793: \n"
-                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800:0ggoki::0ggoki~1: \n"
-                ":xx_blank1308798611726794793:     ﹒**thαnk you for boosting**\n"
-                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800:000paw:  :0000~1:   ֪ __kitten__ ⑅\n"
+                "<:xx_blank1308798611726794793:1500174266396704875> \n"
+                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
+                "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
+                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:000paw:1486941220222664843>   ֪ __kitten__ ⑅\n"
                 f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. . ͡  ɞ {after.mention}"
             )
             await channel.send(boost_msg)
