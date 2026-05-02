@@ -25,4 +25,4 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # Put your secret token between the quotes below
-bot.run(os.environ.get('DMTQ5OTkxMDMyMzcyNDA5MTQ1Mw.GSnXul.79n6l8j7BmqermaHZlJRGVSTeUjJMtL5X8Qt3cN'))
+bot.run(os.environ.get('DISCORD_TOKEN'))
