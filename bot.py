@@ -81,11 +81,12 @@ async def inrole(ctx, *, role: discord.Role):
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def testboost(ctx):
+    # This command uses your exact updated emoji IDs and layout
     boost_msg = (
         "‎\n"
         "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
-        ":xx_blank: ﹒**thank you for boosting**\n"
-        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:00misc:1492955070990389309>  :0000:   ֪ **kitten**\n"
+        "<:xx_blank1308798611726794793:1500174266396704875> ﹒**thank you for boosting**\n"
+        "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:00misc:1492955070990389309> <a:0000:1500174063740391514> ֪ **kitten**\n"
         f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. .ɞ˚‧{ctx.author.mention}"
     )
     await ctx.send(boost_msg)
@@ -141,8 +142,8 @@ async def on_member_update(before, after):
             boost_msg = (
                 "‎\n"
                 "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
-                ":xx_blank: ﹒**thank you for boosting**\n"
-                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:00misc:1492955070990389309>  :0000:   ֪ **kitten**\n"
+                "<:xx_blank1308798611726794793:1500174266396704875> ﹒**thank you for boosting**\n"
+                "\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800<a:00misc:1492955070990389309> <a:0000:1500174063740391514> ֪ **kitten**\n"
                 f"\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800\u2800. .ɞ˚‧{after.mention}"
             )
             await channel.send(boost_msg)
