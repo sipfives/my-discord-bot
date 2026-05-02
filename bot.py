@@ -19,7 +19,6 @@ CLEAN_CHANNEL_IDS = {
     1483988599337783448: "catfishing = ban <3"
 }
 
-# UPDATED: Added your new thread ID here
 LOG_CHANNEL_IDS = {
     1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
     1499947145296351242: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
@@ -30,7 +29,7 @@ STATUS_ROLE_NAME = "pic"
 STATUS_TRIGGER = "/pinkie"
 BABY_PINK = 0xFFB6C1
 
-# 3. BACKGROUND TASK: Status Checker (Audit Aware)
+# 3. BACKGROUND TASK: Status Checker
 @tasks.loop(seconds=30)
 async def check_pinkie_status():
     for guild in bot.guilds:
@@ -61,17 +60,61 @@ async def check_pinkie_status():
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.role [user] [name]` - Toggles a role (ignores decor!).\n`.testboost` - Test the boost layout.", inline=False)
-    embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
+    embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.inrole [role]` | `.role [user] [name]` | `.testboost`", inline=False)
+    embed.add_field(name="🖼️ **Profile**", value="`.av` / `.sav` - View Avatar / Server Avatar\n`.banner` / `.sbanner` - View Banner / Server Banner", inline=False)
+    embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` | `.reroll [msg_id]`", inline=False)
     await ctx.send(embed=embed)
+
+# --- AVATAR COMMANDS ---
+@bot.command(aliases=['avatar'])
+async def av(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    embed = discord.Embed(title=f"🐾 {member.name}'s Avatar", color=BABY_PINK)
+    embed.set_image(url=member.display_avatar.url)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=['serveravatar'])
+async def sav(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    url = member.guild_avatar.url if member.guild_avatar else member.display_avatar.url
+    embed = discord.Embed(title=f"🐾 {member.name}'s Server Avatar", color=BABY_PINK)
+    embed.set_image(url=url)
+    await ctx.send(embed=embed)
+
+# --- BANNER COMMANDS ---
+@bot.command()
+async def banner(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    user = await bot.fetch_user(member.id) # Fetching user is required to see banners
+    if not user.banner:
+        return await ctx.send("🐾 This user doesn't have a banner!")
+    embed = discord.Embed(title=f"🐾 {member.name}'s Banner", color=BABY_PINK)
+    embed.set_image(url=user.banner.url)
+    await ctx.send(embed=embed)
+
+@bot.command(aliases=['serverbanner'])
+async def sbanner(ctx):
+    if not ctx.guild.banner:
+        return await ctx.send("🐾 This server doesn't have a banner yet!")
+    embed = discord.Embed(title=f"🐾 {ctx.guild.name}'s Server Banner", color=BABY_PINK)
+    embed.set_image(url=ctx.guild.banner.url)
+    await ctx.send(embed=embed)
+
+# --- ADMIN COMMANDS ---
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def purge(ctx, amount: int):
+    deleted = await ctx.channel.purge(limit=amount + 1)
+    confirm = await ctx.send(f"🐾 successfully purged **{len(deleted)-1}** messages! meow")
+    await asyncio.sleep(3)
+    await confirm.delete()
 
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, *, search: str):
     role = discord.utils.find(lambda r: search.lower() in r.name.lower(), ctx.guild.roles)
     if role is None:
-        await ctx.send(f"🐾 I couldn't find any role containing **{search}**!")
-        return
+        return await ctx.send(f"🐾 I couldn't find any role containing **{search}**!")
     if role in member.roles:
         await member.remove_roles(role)
         embed = discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK)
@@ -84,8 +127,7 @@ async def role(ctx, member: discord.Member, *, search: str):
 async def inrole(ctx, *, role: discord.Role):
     members = role.members
     if not members:
-        await ctx.send(f"No one has the **{role.name}** role yet!")
-        return
+        return await ctx.send(f"No one has the **{role.name}** role yet!")
     member_pings = "\n".join([f"• <@{m.id}>" for m in members])
     embed = discord.Embed(title=f"Members with {role.name}", description=member_pings, color=BABY_PINK)
     await ctx.send(embed=embed)
@@ -102,6 +144,7 @@ async def testboost(ctx):
     )
     await ctx.send(boost_msg)
 
+# --- GIVEAWAY SYSTEM ---
 def convert_time(time_str):
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     unit = time_str[-1]
@@ -113,9 +156,7 @@ def convert_time(time_str):
 @commands.has_permissions(manage_messages=True)
 async def giveaway(ctx, duration: str, *, prize: str):
     seconds = convert_time(duration)
-    if seconds == -1:
-        await ctx.send("Use a valid time (10m, 1h, etc)!")
-        return
+    if seconds == -1: return await ctx.send("Use a valid time (10m, 1h, etc)!")
     embed = discord.Embed(title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀", description=f"React with 🎉!\n\n**Prize:** {prize}\n**Ends in:** {duration}\n**Host:** {ctx.author.mention}", color=BABY_PINK)
     embed.add_field(name="Rules:", value="🐾 Must be in server.\n🐾 No alts.\n🐾 Level 5+")
     g_msg = await ctx.send(embed=embed)
@@ -164,7 +205,6 @@ async def on_message(message):
     if message.author == bot.user: return
     current_id = message.channel.id
     parent_id = getattr(message.channel, "parent_id", None)
-    
     target_clean_id = current_id if current_id in CLEAN_CHANNEL_IDS else parent_id if parent_id in CLEAN_CHANNEL_IDS else None
     if target_clean_id:
         custom_msg = CLEAN_CHANNEL_IDS[target_clean_id]
@@ -174,11 +214,9 @@ async def on_message(message):
                 except: pass 
         await message.channel.send(custom_msg)
         return
-    
     target_log_id = current_id if current_id in LOG_CHANNEL_IDS else parent_id if parent_id in LOG_CHANNEL_IDS else None
     if target_log_id: 
         await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
-    
     await bot.process_commands(message)
 
 bot.run(os.environ.get('DISCORD_TOKEN'))
