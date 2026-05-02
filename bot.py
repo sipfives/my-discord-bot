@@ -21,6 +21,13 @@ TIPS_CHANNEL_ID = 1484554927794819232
 BOOST_CHANNEL_ID = 1484728025059819611 
 STAFF_ROLE_ID = 1483887906031669278
 
+AUTHORIZED_CLOSE_ROLES = [
+    1483887906031669278, # Staff
+    1483884626605768785, # Manager
+    1484294120510853200, # Admin
+    1484041123390423110  # Owner/Specialist
+]
+
 STATUS_ROLE_NAME = "pic"
 STATUS_TRIGGER = "/pinkie"
 HELP_HEX = 0xFFD4F4 
@@ -32,13 +39,61 @@ CLEAN_CHANNEL_IDS = {
     1483988599337783448: "catfishing = ban <3"
 }
 
-# --- FIXED LOG CHANNELS (Line 19 & 20) ---
 LOG_CHANNEL_IDS = {
     1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
     1499947145296351242: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 }
 
-# --- DROPDOWN LOGIC (Staff Tips) ---
+# --- CLOSE BUTTON LOGIC ---
+class CloseTicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.danger, emoji="🔒")
+    async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        user_role_ids = [role.id for role in interaction.user.roles]
+        is_staff = any(role_id in AUTHORIZED_CLOSE_ROLES for role_id in user_role_ids)
+
+        if not is_staff:
+            return await interaction.response.send_message("🐾 Sorry, only staff can close tickets! meow", ephemeral=True)
+
+        embed = discord.Embed(description="🐾 **Closing ticket...**\nThis channel will be deleted in 5 seconds.", color=HELP_HEX)
+        await interaction.response.send_message(embed=embed)
+        await asyncio.sleep(5)
+        await interaction.channel.delete()
+
+# --- TICKET SYSTEM LOGIC ---
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="create ticket", style=discord.ButtonStyle.gray, emoji="<a:00_pusheenwork:1485859767543926804>")
+    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild = interaction.guild
+        category = guild.get_channel(TICKET_CATEGORY_ID)
+        if not category: return await interaction.response.send_message("🐾 Error: Category not found.", ephemeral=True)
+
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True)
+        }
+        
+        staff_role = guild.get_role(STAFF_ROLE_ID)
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+
+        channel = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=category, overwrites=overwrites)
+        
+        embed1 = discord.Embed(description=f"🐾 **help needed for ekitten**\n\nHi {interaction.user.mention}! Please describe your issue or question here.", color=HELP_HEX)
+        await channel.send(embed=embed1)
+        
+        embed2 = discord.Embed(description="α helper will be here with you shortly! meow", color=HELP_HEX)
+        await channel.send(content=f"<@&{STAFF_ROLE_ID}>", embed=embed2, view=CloseTicketView())
+        
+        await interaction.response.send_message(f"🐾 Ticket opened! {channel.mention}", ephemeral=True)
+
+# --- DROPDOWN LOGIC ---
 class TipsView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -73,37 +128,6 @@ class TipsView(discord.ui.View):
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
-# --- TICKET SYSTEM LOGIC ---
-class TicketView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="create ticket", style=discord.ButtonStyle.gray, emoji="<a:00_pusheenwork:1485859767543926804>")
-    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        guild = interaction.guild
-        category = guild.get_channel(TICKET_CATEGORY_ID)
-        if not category: return await interaction.response.send_message("🐾 Error: Category not found.", ephemeral=True)
-
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
-            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True)
-        }
-        
-        staff_role = guild.get_role(STAFF_ROLE_ID)
-        if staff_role:
-            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
-
-        channel = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=category, overwrites=overwrites)
-        
-        embed1 = discord.Embed(description=f"🐾 **help needed for ekitten**\n\nHi {interaction.user.mention}! Please describe your issue or question here.", color=HELP_HEX)
-        await channel.send(embed=embed1)
-        
-        embed2 = discord.Embed(description="α helper will be here with you shortly! meow", color=HELP_HEX)
-        await channel.send(content=f"<@&{STAFF_ROLE_ID}>", embed=embed2)
-        
-        await interaction.response.send_message(f"🐾 Ticket opened! {channel.mention}", ephemeral=True)
-
 # --- BACKGROUND TASK: Status Role ---
 @tasks.loop(seconds=30)
 async def check_pinkie_status():
@@ -126,9 +150,8 @@ async def check_pinkie_status():
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", color=BABY_PINK)
     embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.role [user] [name]` | `.inrole [role]` | `.testboost` | `.setuptips` | `.setup_ticket` ", inline=False)
-    embed.add_field(name="🖼️ **Profile**", value="`.av` | `.sav` | `.banner` | `.sbanner` | `.guildbanner`", inline=False)
-    embed.add_field(name="🔨 **Moderation**", value="`.ban` | `.kick` | `.timeout` | `.close` ", inline=False)
-    embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` | `.reroll [msg_id]`", inline=False)
+    embed.add_field(name="🖼️ **Profile**", value="`.av` | `.sav` | `.banner` | `.sbanner` | `.guildbanner` ", inline=False)
+    embed.add_field(name="🔨 **Moderation**", value="`.ban [user] [reason]` | `.kick [user] [reason]` | `.timeout [user] [time] [reason]` ", inline=False)
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -142,11 +165,11 @@ async def setup_ticket(ctx):
         "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
         "<:xx_blank1308798611726794793:1500174266396704875>\n"
         "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd <#1484554927794819232> before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568> click button to make α ticket!<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568> click button to mαke α ticket!<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
         "<:xx_blank1308798611726794793:1500174266396704875>\n"
         "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
     )
-    embed.set_footer(text="chocolα - narko made me!")
+    embed.set_footer(text="chocolα - narko mαde me!")
     await channel.send(embed=embed, view=TicketView())
     await ctx.send("🐾 Ticket setup complete!")
 
@@ -166,15 +189,6 @@ async def setuptips(ctx):
     )
     await channel.send(embed=embed, view=TipsView())
     await ctx.send("🐾 Staff tips sent!")
-
-@bot.command()
-@commands.has_permissions(manage_channels=True)
-async def close(ctx):
-    if "ticket-" in ctx.channel.name:
-        await ctx.send("🐾 Closing ticket in 5 seconds...")
-        await asyncio.sleep(5)
-        await ctx.channel.delete()
-    else: await ctx.send("🐾 This isn't a ticket channel!")
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
@@ -278,19 +292,6 @@ async def guildbanner(ctx):
     embed.set_image(url=ctx.guild.banner.url); await ctx.send(embed=embed)
 
 @bot.command()
-@commands.has_permissions(manage_messages=True)
-async def giveaway(ctx, duration: str, *, prize: str):
-    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    seconds = int(duration[:-1]) * time_dict.get(duration[-1], 60)
-    embed = discord.Embed(title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀", description=f"React with 🎉!\n\n**Prize:** {prize}\n**Ends in:** {duration}", color=BABY_PINK)
-    g_msg = await ctx.send(embed=embed); await g_msg.add_reaction("🎉")
-    await asyncio.sleep(seconds)
-    new_msg = await ctx.channel.fetch_message(g_msg.id)
-    users = [u async for u in new_msg.reactions[0].users() if not u.bot]
-    if not users: await ctx.send("No entries. 💔")
-    else: await ctx.send(f"🎉 **CONGRATS** <@{random.choice(users).id}>! You won **{prize}**!")
-
-@bot.command()
 @commands.has_permissions(administrator=True)
 async def testboost(ctx):
     boost_msg = (
@@ -305,8 +306,8 @@ async def testboost(ctx):
 # --- EVENTS ---
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name}')
-    bot.add_view(TipsView()); bot.add_view(TicketView())
+    print(f'Logged in αs {bot.user.name}')
+    bot.add_view(TipsView()); bot.add_view(TicketView()); bot.add_view(CloseTicketView())
     if not check_pinkie_status.is_running(): check_pinkie_status.start()
 
 @bot.event
