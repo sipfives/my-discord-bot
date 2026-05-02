@@ -11,12 +11,18 @@ intents.presences = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # 2. Configuration
-# Add your channel names here!
-WATCHED_CHANNELS = ["﹒╭✿，selfie﹒୭"] 
+# FORMAT: "channel-name": "Message you want"
+# TIP: Copy the name exactly as it appears in the channel header!
+WATCHED_CHANNELS = {
+    "mods": "Meow! Narko is so cute 🐾",
+    "﹒s﹒scαmmers": "only post actual scammers. do not post nsfw messages here!",
+    "﹒╭✿，selfie﹒୭": "I love seeing your faces! 📸"
+}
+
 STATUS_ROLE_NAME = "pic"
 STATUS_TRIGGER = "/pinkie"
 
-# 3. BACKGROUND TASK: Status Checker (Gives "pic" role for /pinkie status)
+# 3. BACKGROUND TASK: Status Checker
 @tasks.loop(seconds=30)
 async def check_pinkie_status():
     for guild in bot.guilds:
@@ -36,7 +42,7 @@ async def check_pinkie_status():
                 try: await member.remove_roles(role)
                 except: pass
 
-# 4. COMMAND: In Role (Baby Pink & Pings)
+# 4. COMMAND: In Role
 @bot.command()
 async def inrole(ctx, *, role: discord.Role):
     members = role.members
@@ -60,21 +66,22 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # Check if the channel is in our watch list
+    # Check if the channel name is one of our keys in WATCHED_CHANNELS
     if message.channel.name in WATCHED_CHANNELS:
-        # CLEANUP: Find and delete the bot's last "watching" message
+        custom_msg = WATCHED_CHANNELS[message.channel.name]
+        
+        # CLEANUP: Delete the previous custom message for THIS channel
         async for old_msg in message.channel.history(limit=50):
-            if old_msg.author == bot.user and old_msg.content == "catfishing = ban":
+            if old_msg.author == bot.user and old_msg.content == custom_msg:
                 try:
                     await old_msg.delete()
                     break 
                 except:
                     pass 
         
-        # Send the fresh meow
-        await message.channel.send("catfishing = ban")
+        # Send the fresh custom message
+        await message.channel.send(custom_msg)
     
-    # Allows the !inrole command to work
     await bot.process_commands(message)
 
 bot.run(os.environ.get('DISCORD_TOKEN'))
