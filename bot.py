@@ -3,7 +3,6 @@ from discord.ext import commands, tasks
 import os
 import asyncio
 import random
-import re
 
 # 1. Permissions Setup
 intents = discord.Intents.default()
@@ -11,8 +10,8 @@ intents.message_content = True
 intents.members = True          
 intents.presences = True        
 
-# UPDATED: Prefix is now ","
-bot = commands.Bot(command_prefix=",", intents=intents)
+# Prefix set to "."
+bot = commands.Bot(command_prefix=".", intents=intents, help_command=None) # We disable default help to use our custom one
 
 # 2. Configuration
 CLEAN_CHANNEL_IDS = {
@@ -49,6 +48,35 @@ async def check_pinkie_status():
                 except: pass
 
 # 4. COMMANDS
+
+# --- CUSTOM HELP COMMAND ---
+@bot.command()
+async def help(ctx):
+    embed = discord.Embed(
+        title="🎀 **chocolα's help menu** 🎀",
+        description="Here are the commands available for you, kitties!",
+        color=BABY_PINK
+    )
+    
+    embed.add_field(
+        name="🐾 **General**", 
+        value="`.help` - Shows this cute menu!\n`.inrole [role]` - Pings everyone with a specific role.",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🎁 **Giveaways**", 
+        value=(
+            "`.giveaway [time] [prize]` - Starts a giveaway!\n"
+            "*Example: .giveaway 1h Nitro*\n"
+            "`.reroll [message_id]` - Picks a new winner from a past giveaway."
+        ),
+        inline=False
+    )
+    
+    embed.set_footer(text="Prefix: . | Make sure to use the correct time formats (s, m, h, d)")
+    await ctx.send(embed=embed)
+
 @bot.command()
 async def inrole(ctx, *, role: discord.Role):
     members = role.members
@@ -61,7 +89,6 @@ async def inrole(ctx, *, role: discord.Role):
     await ctx.send(embed=embed)
 
 # --- GIVEAWAY SYSTEM ---
-
 def convert_time(time_str):
     pos = ["s", "m", "h", "d"]
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
