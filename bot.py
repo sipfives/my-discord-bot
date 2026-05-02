@@ -58,15 +58,26 @@ async def check_pinkie_status():
 # 4. COMMANDS
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.role [user] [role]` - Adds or removes a role from someone.\n`.testboost` - Test the boost message layout.", inline=False)
+    embed = discord.Embed(
+        title="🎀 **chocolα's help menu** 🎀", 
+        description="Here are the commands available for you, kitties!", 
+        color=BABY_PINK
+    )
+    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.\n`.role [user] [role name]` - Adds or removes a role (no ping needed!).\n`.testboost` - Test the boost message layout.", inline=False)
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
+    embed.set_footer(text="Prefix: .")
     await ctx.send(embed=embed)
 
-# NEW: Role Add/Remove Toggle Command
+# UPDATED: Role Toggle Command (Search by Name)
 @bot.command()
 @commands.has_permissions(manage_roles=True)
-async def role(ctx, member: discord.Member, *, role: discord.Role):
+async def role(ctx, member: discord.Member, *, role_name: str):
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    
+    if role is None:
+        await ctx.send(f"🐾 I couldn't find a role named **{role_name}**! Check the spelling and decor.")
+        return
+
     if role in member.roles:
         await member.remove_roles(role)
         embed = discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK)
