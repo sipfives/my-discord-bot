@@ -15,6 +15,17 @@ intents.moderation = True
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
 # 2. Configuration
+TICKET_CATEGORY_ID = 1484550188885475348
+TICKET_PROMPT_CHANNEL_ID = 1484049393387700336
+TIPS_CHANNEL_ID = 1484554927794819232
+BOOST_CHANNEL_ID = 1484728025059819611 
+
+STATUS_ROLE_NAME = "pic"
+STATUS_TRIGGER = "/pinkie"
+HELP_HEX = 0xFFD4F4 
+BABY_PINK = 0xFFB6C1
+DIVIDER_IMAGE = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png"
+
 CLEAN_CHANNEL_IDS = {
     1484730031048491049: "only post real scammers. youll be warned if you send any nsfw messages.",
     1483988599337783448: "catfishing = ban <3"
@@ -25,13 +36,7 @@ LOG_CHANNEL_IDS = {
     1499947145296351242: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 }
 
-BOOST_CHANNEL_ID = 1484728025059819611 
-TIPS_CHANNEL_ID = 1484554927794819232
-BABY_PINK = 0xFFB6C1
-HELP_HEX = 0xFFD4F4 
-DIVIDER_IMAGE = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png?ex=69f79581&is=69f64401&hm=92badebe6ac0febaa25412e7128172c6b436d6210314c34f04275d4c48b8e8d2&=&format=webp&quality=lossless&width=2560&height=722"
-
-# --- DROPDOWN LOGIC ---
+# --- DROPDOWN LOGIC (Staff Tips) ---
 class TipsView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -66,234 +71,223 @@ class TipsView(discord.ui.View):
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
-# 3. COMMANDS
+# --- TICKET SYSTEM LOGIC ---
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="create ticket", style=discord.ButtonStyle.gray, emoji="<a:00_pusheenwork:1485859767543926804>")
+    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild = interaction.guild
+        category = guild.get_channel(TICKET_CATEGORY_ID)
+        if not category: return await interaction.response.send_message("🐾 Error: Category not found.", ephemeral=True)
+
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True)
+        }
+        channel = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=category, overwrites=overwrites)
+        embed = discord.Embed(description=f"🐾 **help needed for ekitten**\n\nHi {interaction.user.mention}! Please describe your issue or question here and stαff will be with you shortly.", color=HELP_HEX)
+        await channel.send(embed=embed)
+        await interaction.response.send_message(f"🐾 Ticket opened! {channel.mention}", ephemeral=True)
+
+# --- BACKGROUND TASK: Status Role ---
+@tasks.loop(seconds=30)
+async def check_pinkie_status():
+    for guild in bot.guilds:
+        role = discord.utils.get(guild.roles, name=STATUS_ROLE_NAME)
+        if not role: continue
+        for member in guild.members:
+            if member.bot: continue
+            custom_status = next((a.name for a in member.activities if isinstance(a, discord.CustomActivity)), None)
+            has_trigger = custom_status and STATUS_TRIGGER in custom_status.lower()
+            if has_trigger and role not in member.roles:
+                try: await member.add_roles(role)
+                except: pass
+            elif not has_trigger and role in member.roles:
+                try: await member.remove_roles(role)
+                except: pass
+
+# --- COMMANDS ---
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.inrole [role]` | `.role [user] [name]` | `.testboost` | `.setuptips`", inline=False)
+    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", color=BABY_PINK)
+    embed.add_field(name="🐾 **General**", value="`.help` | `.purge [amount]` | `.role [user] [name]` | `.inrole [role]` | `.testboost`", inline=False)
     embed.add_field(name="🖼️ **Profile**", value="`.av` | `.sav` | `.banner` | `.sbanner` | `.guildbanner`", inline=False)
-    embed.add_field(name="🔨 **Moderation**", value="`.ban [user] [reason]` | `.kick [user] [reason]` | `.timeout [user] [time] [reason]`", inline=False)
+    embed.add_field(name="🔨 **Moderation**", value="`.ban` | `.kick` | `.timeout` | `.close` | `.setup_ticket` | `.setuptips`", inline=False)
     embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` | `.reroll [msg_id]`", inline=False)
     await ctx.send(embed=embed)
 
 @bot.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
-    embed = discord.Embed(title=f"<a:000kitty:1484802888122503178> Meow! You've been Banned from {ctx.guild.name}", color=HELP_HEX)
-    embed.description = "You've been permanently banned from this server."
-    embed.add_field(name="🐾 Reason:", value=reason, inline=False)
-    embed.add_field(name="🐾 Appeal:", value="If you believe this was a mistake, please contact administration elsewhere.", inline=False)
-    dm_sent = True
-    try: await member.send(embed=embed)
-    except: dm_sent = False
-    await member.ban(reason=reason)
-    msg = f"🐾 **{member.name}** has been banned. meow!"
-    if not dm_sent: msg += "\n⚠️ *I couldn't DM the user (DMs closed), but they were still banned.*"
-    await ctx.send(msg)
+@commands.has_permissions(administrator=True)
+async def setup_ticket(ctx):
+    channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
+    await channel.send(DIVIDER_IMAGE)
+    embed = discord.Embed(color=HELP_HEX)
+    embed.description = (
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd <#1484554927794819232> before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568> click button to make α ticket!<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
+    )
+    embed.set_footer(text="chocolα - narko made me!")
+    await channel.send(embed=embed, view=TicketView())
+    await ctx.send("🐾 Ticket setup complete!")
 
 @bot.command()
-@commands.has_permissions(kick_members=True)
-async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
-    embed = discord.Embed(title=f"<a:000kitty:1484802888122503178> Meow! You've been kicked from {ctx.guild.name}", color=HELP_HEX)
-    embed.description = "You've been kicked from the server."
-    embed.add_field(name="🐾 Reason:", value=reason, inline=False)
-    dm_sent = True
-    try: await member.send(embed=embed)
-    except: dm_sent = False
-    await member.kick(reason=reason)
-    msg = f"🐾 **{member.name}** has been kicked. meow!"
-    if not dm_sent: msg += "\n⚠️ *I couldn't DM the user (DMs closed), but they were still kicked.*"
-    await ctx.send(msg)
-
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, time: str, *, reason="No reason provided"):
-    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    unit = time[-1]
-    if unit not in time_dict: return await ctx.send("🐾 Use a valid time (10m, 1h, etc)!")
-    seconds = int(time[:-1]) * time_dict[unit]
-    duration = datetime.timedelta(seconds=seconds)
-    embed = discord.Embed(title=f"Meow! Time out! <a:000kitty:1484802888122503178>", color=HELP_HEX)
-    embed.description = "Your talking privileges have been temporarily suspended. :3"
-    embed.add_field(name="🐾 Duration:", value=time, inline=False)
-    embed.add_field(name="🐾 Reason:", value=reason, inline=False)
-    dm_sent = True
-    try: await member.send(embed=embed)
-    except: dm_sent = False
-    await member.timeout(duration, reason=reason)
-    msg = f"🐾 **{member.name}** has been timed out for {time}."
-    if not dm_sent: msg += "\n⚠️ *I couldn't DM the user (DMs closed), but they were still timed out.*"
-    await ctx.send(msg)
+@commands.has_permissions(manage_channels=True)
+async def close(ctx):
+    if "ticket-" in ctx.channel.name:
+        await ctx.send("🐾 Closing ticket in 5 seconds...")
+        await asyncio.sleep(5)
+        await ctx.channel.delete()
+    else: await ctx.send("🐾 This isn't a ticket channel!")
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
 async def purge(ctx, amount: int):
     deleted = await ctx.channel.purge(limit=amount + 1)
     confirm = await ctx.send(f"🐾 successfully purged **{len(deleted)-1}** messages! meow")
-    await asyncio.sleep(3)
-    await confirm.delete()
+    await asyncio.sleep(3); await confirm.delete()
 
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, *, search: str):
     role = discord.utils.find(lambda r: search.lower() in r.name.lower(), ctx.guild.roles)
-    if role is None:
-        return await ctx.send(f"🐾 I couldn't find any role containing **{search}**!")
+    if role is None: return await ctx.send(f"🐾 I couldn't find any role containing **{search}**!")
     if role in member.roles:
         await member.remove_roles(role)
-        embed = discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK)
+        await ctx.send(embed=discord.Embed(description=f"🐾 Removed **{role.name}** from {member.mention}", color=BABY_PINK))
     else:
         await member.add_roles(role)
-        embed = discord.Embed(description=f"🐾 Added **{role.name}** to {member.mention}", color=BABY_PINK)
-    await ctx.send(embed=embed)
+        await ctx.send(embed=discord.Embed(description=f"🐾 Added **{role.name}** to {member.mention}", color=BABY_PINK))
 
 @bot.command()
 async def inrole(ctx, *, role: discord.Role):
     members = role.members
-    if not members:
-        return await ctx.send(f"🐾 No one has the **{role.name}** role yet!")
-    member_pings = "\n".join([f"• {m.mention}" for m in members])
-    if len(member_pings) > 2000: member_pings = member_pings[:1990] + "\n...and more!"
-    embed = discord.Embed(title=f"Members with {role.name}", description=member_pings, color=BABY_PINK)
-    await ctx.send(embed=embed)
+    if not members: return await ctx.send(f"🐾 No one has the **{role.name}** role yet!")
+    pings = "\n".join([f"• {m.mention}" for m in members])
+    if len(pings) > 2000: pings = pings[:1990] + "\n..."
+    await ctx.send(embed=discord.Embed(title=f"Members with {role.name}", description=pings, color=BABY_PINK))
+
+# --- MODERATION ---
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
+    embed = discord.Embed(title=f"<a:000kitty:1484802888122503178> Meow! You've been Banned", color=HELP_HEX)
+    embed.add_field(name="🐾 Reason:", value=reason, inline=False)
+    dm_sent = True
+    try: await member.send(embed=embed)
+    except: dm_sent = False
+    await member.ban(reason=reason)
+    await ctx.send(f"🐾 **{member.name}** has been banned. meow!" + ("" if dm_sent else "\n⚠️ *DMs closed.*"))
 
 @bot.command()
-@commands.has_permissions(administrator=True)
-async def setuptips(ctx):
-    channel = bot.get_channel(TIPS_CHANNEL_ID)
-    if not channel: return await ctx.send("🐾 I couldn't find the channel!")
-    await channel.send(DIVIDER_IMAGE)
-    embed = discord.Embed(color=HELP_HEX)
-    embed.description = (
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875>**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness<:xx_blank1308798611726794793:1500174266396704875>**\n\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>use drop down menu below\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
-    )
-    await channel.send(embed=embed, view=TipsView())
-    await ctx.send("🐾 Help system sent!")
+@commands.has_permissions(kick_members=True)
+async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
+    embed = discord.Embed(title=f"<a:000kitty:1484802888122503178> Meow! You've been kicked", color=HELP_HEX)
+    embed.add_field(name="🐾 Reason:", value=reason, inline=False)
+    dm_sent = True
+    try: await member.send(embed=embed)
+    except: dm_sent = False
+    await member.kick(reason=reason)
+    await ctx.send(f"🐾 **{member.name}** has been kicked. meow!" + ("" if dm_sent else "\n⚠️ *DMs closed.*"))
+
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def timeout(ctx, member: discord.Member, time: str, *, reason="No reason provided"):
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    unit = time[-1]
+    if unit not in time_dict: return await ctx.send("🐾 Use 10m, 1h, etc!")
+    seconds = int(time[:-1]) * time_dict[unit]
+    duration = datetime.timedelta(seconds=seconds)
+    embed = discord.Embed(title=f"Meow! Time out! <a:000kitty:1484802888122503178>", color=HELP_HEX)
+    embed.add_field(name="🐾 Duration:", value=time, inline=False)
+    embed.add_field(name="🐾 Reason:", value=reason, inline=False)
+    dm_sent = True
+    try: await member.send(embed=embed)
+    except: dm_sent = False
+    await member.timeout(duration, reason=reason)
+    await ctx.send(f"🐾 **{member.name}** timed out." + ("" if dm_sent else "\n⚠️ *DMs closed.*"))
 
 # --- PROFILE COMMANDS ---
 @bot.command(aliases=['avatar'])
 async def av(ctx, member: discord.Member = None):
     member = member or ctx.author
     url = member.avatar.url if member.avatar else member.default_avatar.url
-    embed = discord.Embed(title=f"🐾 {member.name}'s Global Avatar", color=BABY_PINK)
-    embed.set_image(url=url)
-    await ctx.send(embed=embed)
+    embed = discord.Embed(title=f"🐾 {member.name}'s Avatar", color=BABY_PINK)
+    embed.set_image(url=url); await ctx.send(embed=embed)
 
 @bot.command(aliases=['serveravatar'])
 async def sav(ctx, member: discord.Member = None):
     member = member or ctx.author
     url = member.guild_avatar.url if member.guild_avatar else member.display_avatar.url
     embed = discord.Embed(title=f"🐾 {member.name}'s Server Avatar", color=BABY_PINK)
-    embed.set_image(url=url)
-    await ctx.send(embed=embed)
+    embed.set_image(url=url); await ctx.send(embed=embed)
 
 @bot.command()
 async def banner(ctx, member: discord.Member = None):
     member = member or ctx.author
     user = await bot.fetch_user(member.id)
     if not user.banner: return await ctx.send("🐾 No global banner!")
-    embed = discord.Embed(title=f"🐾 {member.name}'s Global Banner", color=BABY_PINK)
-    embed.set_image(url=user.banner.url)
-    await ctx.send(embed=embed)
+    embed = discord.Embed(title=f"🐾 {member.name}'s Banner", color=BABY_PINK)
+    embed.set_image(url=user.banner.url); await ctx.send(embed=embed)
 
 @bot.command(aliases=['serverbanner'])
 async def sbanner(ctx, member: discord.Member = None):
     member = member or ctx.author
     if not member.banner: return await ctx.send("🐾 No server banner!")
-    embed = discord.Embed(title=f"🐾 {member.name}'s Server Profile Banner", color=BABY_PINK)
-    embed.set_image(url=member.banner.url)
-    await ctx.send(embed=embed)
+    embed = discord.Embed(title=f"🐾 {member.name}'s Server Banner", color=BABY_PINK)
+    embed.set_image(url=member.banner.url); await ctx.send(embed=embed)
 
 @bot.command()
 async def guildbanner(ctx):
     if not ctx.guild.banner: return await ctx.send("🐾 No banner!")
     embed = discord.Embed(title=f"🐾 {ctx.guild.name}'s Banner", color=BABY_PINK)
-    embed.set_image(url=ctx.guild.banner.url)
-    await ctx.send(embed=embed)
+    embed.set_image(url=ctx.guild.banner.url); await ctx.send(embed=embed)
 
-# --- GIVEAWAY SYSTEM ---
-def convert_time(time_str):
-    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    unit = time_str[-1]
-    if unit not in time_dict: return -1
-    try: return int(time_str[:-1]) * time_dict[unit]
-    except: return -1
-
+# --- GIVEAWAYS & BOOSTER ---
 @bot.command()
 @commands.has_permissions(manage_messages=True)
 async def giveaway(ctx, duration: str, *, prize: str):
-    seconds = convert_time(duration)
-    if seconds == -1: return await ctx.send("🐾 Use 10m, 1h, etc!")
-    embed = discord.Embed(title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀", description=f"React with 🎉!\n\n**Prize:** {prize}\n**Ends in:** {duration}\n**Host:** {ctx.author.mention}", color=BABY_PINK)
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    seconds = int(duration[:-1]) * time_dict.get(duration[-1], 60)
+    embed = discord.Embed(title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀", description=f"React with 🎉!\n\n**Prize:** {prize}\n**Ends in:** {duration}", color=BABY_PINK)
     g_msg = await ctx.send(embed=embed); await g_msg.add_reaction("🎉")
     await asyncio.sleep(seconds)
     new_msg = await ctx.channel.fetch_message(g_msg.id)
-    users = [user async for user in new_msg.reactions[0].users() if not user.bot]
+    users = [u async for u in new_msg.reactions[0].users() if not u.bot]
     if not users: await ctx.send("No entries. 💔")
     else: await ctx.send(f"🎉 **CONGRATS** <@{random.choice(users).id}>! You won **{prize}**!")
 
 @bot.command()
-@commands.has_permissions(manage_messages=True)
-async def reroll(ctx, message_id: int):
-    try:
-        new_msg = await ctx.channel.fetch_message(message_id)
-        users = [user async for user in new_msg.reactions[0].users() if not user.bot]
-        await ctx.send(f"🎉 **NEW WINNER:** <@{random.choice(users).id}>!")
-    except: await ctx.send("Invalid ID!")
-
-@bot.command()
 @commands.has_permissions(administrator=True)
 async def testboost(ctx):
-    boost_msg = (
-        "<:xx_blank1308798611726794793:1500174266396704875> \n"
-        "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
-        "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
-        "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
-        f"                  . . ͡  ɞ {ctx.author.mention}"
-    )
-    await ctx.send(boost_msg)
+    await ctx.send(f"<:xx_blank1308798611726794793:1500174266396704875> \n                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n                  . . ͡  ɞ {ctx.author.mention}")
 
 # --- EVENTS ---
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
-    bot.add_view(TipsView())
-
-@bot.event
-async def on_member_update(before, after):
-    if before.premium_since is None and after.premium_since is not None:
-        channel = bot.get_channel(BOOST_CHANNEL_ID)
-        if channel:
-            boost_msg = (
-                "<:xx_blank1308798611726794793:1500174266396704875> \n"
-                "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
-                "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
-                "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
-                f"                  . . ͡  ɞ {after.mention}"
-            )
-            await channel.send(boost_msg)
+    bot.add_view(TipsView()); bot.add_view(TicketView())
+    if not check_pinkie_status.is_running(): check_pinkie_status.start()
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user: return
     current_id = message.channel.id
     parent_id = getattr(message.channel, "parent_id", None)
-    target_clean_id = current_id if current_id in CLEAN_CHANNEL_IDS else parent_id if parent_id in CLEAN_CHANNEL_IDS else None
-    if target_clean_id:
-        custom_msg = CLEAN_CHANNEL_IDS[target_clean_id]
-        async for old_msg in message.channel.history(limit=10):
-            if old_msg.author == bot.user and old_msg.content == custom_msg:
-                try: await old_msg.delete(); break 
-                except: pass 
-        await message.channel.send(custom_msg)
-        return
-    target_log_id = current_id if current_id in LOG_CHANNEL_IDS else parent_id if parent_id in LOG_CHANNEL_IDS else None
-    if target_log_id: await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
+    if current_id in CLEAN_CHANNEL_IDS or parent_id in CLEAN_CHANNEL_IDS:
+        custom_msg = CLEAN_CHANNEL_IDS.get(current_id) or CLEAN_CHANNEL_IDS.get(parent_id)
+        async for old in message.channel.history(limit=10):
+            if old.author == bot.user and old.content == custom_msg: await old.delete(); break
+        await message.channel.send(custom_msg); return
+    if current_id in LOG_CHANNEL_IDS or parent_id in LOG_CHANNEL_IDS:
+        await message.channel.send(LOG_CHANNEL_IDS.get(current_id) or LOG_CHANNEL_IDS.get(parent_id))
     await bot.process_commands(message)
 
 bot.run(os.environ.get('DISCORD_TOKEN'))
