@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import os
 
 # 1. Permissions Setup
-intents = discord.discord.Intents.default()
+intents = discord.Intents.default()
 intents.message_content = True  # Needed for the "watching" feature
 intents.members = True          # Needed to see everyone in the server
 intents.presences = True        # Needed to see custom statuses
