@@ -9,9 +9,9 @@ intents = discord.Intents.default()
 intents.message_content = True  
 intents.members = True          
 intents.presences = True        
+intents.moderation = True # Needed to read Audit Logs
 
-# Prefix set to "."
-bot = commands.Bot(command_prefix=".", intents=intents, help_command=None) # We disable default help to use our custom one
+bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
 # 2. Configuration
 CLEAN_CHANNEL_IDS = {
@@ -27,54 +27,55 @@ STATUS_ROLE_NAME = "pic"
 STATUS_TRIGGER = "/pinkie"
 BABY_PINK = 0xFFB6C1
 
-# 3. BACKGROUND TASK: Status Checker
+# 3. BACKGROUND TASK: Audit-Log Status Checker
 @tasks.loop(seconds=30)
 async def check_pinkie_status():
     for guild in bot.guilds:
         role = discord.utils.get(guild.roles, name=STATUS_ROLE_NAME)
         if not role: continue
+        
         for member in guild.members:
             if member.bot: continue
+            
+            # Check current status
             has_status = False
             for activity in member.activities:
                 if isinstance(activity, discord.CustomActivity):
                     if activity.name and STATUS_TRIGGER in activity.name.lower():
                         has_status = True
+            
+            # If they have the status but NOT the role -> Add it
             if has_status and role not in member.roles:
                 try: await member.add_roles(role)
                 except: pass
+            
+            # If they DON'T have the status but DO have the role -> CHECK AUDIT LOG
             elif not has_status and role in member.roles:
-                try: await member.remove_roles(role)
-                except: pass
+                try:
+                    # Look at the most recent time this role was added to this specific member
+                    async for entry in guild.audit_logs(action=discord.AuditLogAction.member_role_update, limit=10):
+                        if entry.target.id == member.id:
+                            # Check if the 'pic' role was added in this log entry
+                            for r in entry.after.roles:
+                                if r.id == role.id:
+                                    # If the bot was the one who added it, the bot can remove it
+                                    if entry.user.id == bot.user.id:
+                                        await member.remove_roles(role)
+                                        print(f"Removed role from {member.name} (Bot-given)")
+                                    else:
+                                        # A human or other bot gave it, so we leave it alone!
+                                        print(f"Skipping {member.name} (Role was given by {entry.user.name})")
+                                    break
+                except Exception as e:
+                    print(f"Audit log error: {e}")
 
 # 4. COMMANDS
-
-# --- CUSTOM HELP COMMAND ---
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(
-        title="🎀 **chocolα's help menu** 🎀",
-        description="Here are the commands available for you, kitties!",
-        color=BABY_PINK
-    )
-    
-    embed.add_field(
-        name="🐾 **General**", 
-        value="`.help` - Shows this cute menu!\n`.inrole [role]` - Pings everyone with a specific role.",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="🎁 **Giveaways**", 
-        value=(
-            "`.giveaway [time] [prize]` - Starts a giveaway!\n"
-            "*Example: .giveaway 1h Nitro*\n"
-            "`.reroll [message_id]` - Picks a new winner from a past giveaway."
-        ),
-        inline=False
-    )
-    
-    embed.set_footer(text="Prefix: . | Make sure to use the correct time formats (s, m, h, d)")
+    embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", description="Here are the commands available for you, kitties!", color=BABY_PINK)
+    embed.add_field(name="🐾 **General**", value="`.help` - Shows this menu!\n`.inrole [role]` - Pings everyone with a role.", inline=False)
+    embed.add_field(name="🎁 **Giveaways**", value="`.giveaway [time] [prize]` - Starts a giveaway!\n`.reroll [message_id]` - Picks a new winner.", inline=False)
+    embed.set_footer(text="Prefix: .")
     await ctx.send(embed=embed)
 
 @bot.command()
@@ -88,15 +89,11 @@ async def inrole(ctx, *, role: discord.Role):
     embed.set_footer(text=f"Total: {len(members)}")
     await ctx.send(embed=embed)
 
-# --- GIVEAWAY SYSTEM ---
 def convert_time(time_str):
-    pos = ["s", "m", "h", "d"]
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     unit = time_str[-1]
-    if unit not in pos: return -1
-    try:
-        val = int(time_str[:-1])
-        return val * time_dict[unit]
+    if unit not in time_dict: return -1
+    try: return int(time_str[:-1]) * time_dict[unit]
     except: return -1
 
 @bot.command()
@@ -104,30 +101,19 @@ def convert_time(time_str):
 async def giveaway(ctx, duration: str, *, prize: str):
     seconds = convert_time(duration)
     if seconds == -1:
-        await ctx.send("Please use a valid time format (e.g., 10m, 1h, 30s)!")
+        await ctx.send("Use a valid time (10m, 1h, etc)!")
         return
-
-    embed = discord.Embed(
-        title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀",
-        description=f"React with 🎉 to join the raffle!\n\n**Prize:** {prize}\n**Ends in:** {duration}\n**Hosted by:** {ctx.author.mention}",
-        color=BABY_PINK
-    )
-    embed.add_field(name="Rules:", value="🐾 Must be in the server to win.\n🐾 No alt accounts.\n🐾 Must be active! (Level 5+)")
-    embed.set_footer(text="Good luck, kitties! 🐾")
-    
+    embed = discord.Embed(title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀", description=f"React with 🎉!\n\n**Prize:** {prize}\n**Ends in:** {duration}\n**Host:** {ctx.author.mention}", color=BABY_PINK)
+    embed.add_field(name="Rules:", value="🐾 Must be in server.\n🐾 No alts.\n🐾 Level 5+")
     g_msg = await ctx.send(embed=embed)
     await g_msg.add_reaction("🎉")
-
     await asyncio.sleep(seconds)
-
     new_msg = await ctx.channel.fetch_message(g_msg.id)
     users = [user async for user in new_msg.reactions[0].users() if not user.bot]
-
-    if not users:
-        await ctx.send("No one joined the giveaway. :( 💔")
+    if not users: await ctx.send("No entries. 💔")
     else:
         winner = random.choice(users)
-        await ctx.send(f"🎉 **CONGRATULATIONS** <@{winner.id}>! You won the **{prize}**!\n*Make sure to check if they are Level 5!*")
+        await ctx.send(f"🎉 **CONGRATS** <@{winner.id}>! You won **{prize}**!")
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
@@ -135,13 +121,9 @@ async def reroll(ctx, message_id: int):
     try:
         new_msg = await ctx.channel.fetch_message(message_id)
         users = [user async for user in new_msg.reactions[0].users() if not user.bot]
-        if not users:
-            await ctx.send("No entries found.")
-            return
         winner = random.choice(users)
-        await ctx.send(f"🎉 **NEW WINNER:** <@{winner.id}>! Congratulations!")
-    except:
-        await ctx.send("I couldn't find that message ID!")
+        await ctx.send(f"🎉 **NEW WINNER:** <@{winner.id}>!")
+    except: await ctx.send("Invalid Message ID!")
 
 # 5. EVENTS
 @bot.event
@@ -152,13 +134,9 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
-        return
-
+    if message.author == bot.user: return
     current_id = message.channel.id
     parent_id = getattr(message.channel, "parent_id", None)
-
-    # Check CLEAN group
     target_clean_id = current_id if current_id in CLEAN_CHANNEL_IDS else parent_id if parent_id in CLEAN_CHANNEL_IDS else None
     if target_clean_id:
         custom_msg = CLEAN_CHANNEL_IDS[target_clean_id]
@@ -168,12 +146,8 @@ async def on_message(message):
                 except: pass 
         await message.channel.send(custom_msg)
         return
-
-    # Check LOG group
     target_log_id = current_id if current_id in LOG_CHANNEL_IDS else parent_id if parent_id in LOG_CHANNEL_IDS else None
-    if target_log_id:
-        await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
-    
+    if target_log_id: await message.channel.send(LOG_CHANNEL_IDS[target_log_id])
     await bot.process_commands(message)
 
 bot.run(os.environ.get('DISCORD_TOKEN'))
