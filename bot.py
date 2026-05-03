@@ -14,7 +14,7 @@ intents.moderation = True
 
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-# 2. Configuration
+# 2. Configuration (Triple-check these IDs in your server!)
 TICKET_CATEGORY_ID = 1484550188885475348
 TICKET_PROMPT_CHANNEL_ID = 1484049393387700336
 TIPS_CHANNEL_ID = 1484554927794819232
@@ -89,7 +89,7 @@ class TicketView(discord.ui.View):
         await channel.send(content=f"<@&{STAFF_ROLE_ID}>", embed=embed2, view=CloseTicketView())
         await interaction.response.send_message(f"🐾 Ticket opened! {channel.mention}", ephemeral=True)
 
-# --- DROPDOWN LOGIC (RESTORED FULL CONTENT) ---
+# --- DROPDOWN LOGIC ---
 class TipsView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -124,7 +124,7 @@ class TipsView(discord.ui.View):
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
-# --- BACKGROUND TASK: Status Role ---
+# --- BACKGROUND TASK ---
 @tasks.loop(seconds=30)
 async def check_pinkie_status():
     for guild in bot.guilds:
@@ -155,8 +155,8 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
-@commands.has_permissions(manage_messages=True)
 async def giveaway(ctx, duration: str, *, prize: str):
+    if not ctx.author.guild_permissions.manage_messages: return
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     seconds = int(duration[:-1]) * time_dict.get(duration[-1], 60)
     embed = discord.Embed(title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀", description=f"React with 🎉!\n\n**Prize:** {prize}\n**Ends in:** {duration}", color=BABY_PINK)
@@ -168,29 +168,45 @@ async def giveaway(ctx, duration: str, *, prize: str):
     else: await ctx.send(f"🎉 **CONGRATS** <@{random.choice(users).id}>! You won **{prize}**!")
 
 @bot.command()
-@commands.has_permissions(manage_messages=True)
 async def reroll(ctx, message_id: int):
+    if not ctx.author.guild_permissions.manage_messages: return
     msg = await ctx.channel.fetch_message(message_id)
     users = [u async for u in msg.reactions[0].users() if not u.bot]
     if not users: await ctx.send("No entries found.")
     else: await ctx.send(f"🎉 **NEW WINNER:** <@{random.choice(users).id}>!")
 
 @bot.command()
-@commands.has_permissions(administrator=True)
 async def setup_ticket(ctx):
-    await bot.get_channel(TICKET_PROMPT_CHANNEL_ID).send(DIVIDER_IMAGE)
-    e = discord.Embed(description="🐾 click button to mαke α ticket!", color=HELP_HEX)
-    await bot.get_channel(TICKET_PROMPT_CHANNEL_ID).send(embed=e, view=TicketView())
+    if not ctx.author.guild_permissions.administrator: return
+    channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
+    await channel.send(DIVIDER_IMAGE)
+    e = discord.Embed(color=HELP_HEX)
+    e.description = ("<:xx_blank1308798611726794793:1500174266396704875>\n"
+                     "꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ\n"
+                     "<a:001heart:1494073417056649568> click button to mαke α ticket!\n"
+                     "*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>")
+    await channel.send(embed=e, view=TicketView())
+    await ctx.send("🐾 Ticket setup sent!")
 
 @bot.command()
-@commands.has_permissions(manage_messages=True)
+async def setuptips(ctx):
+    if not ctx.author.guild_permissions.administrator: return
+    channel = bot.get_channel(TIPS_CHANNEL_ID)
+    await channel.send(DIVIDER_IMAGE)
+    e = discord.Embed(color=HELP_HEX)
+    e.description = ("<a:001heart:1494073417056649568> use drop down menu below\n"
+                     "*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>")
+    await channel.send(embed=e, view=TipsView())
+    await ctx.send("🐾 Tips setup sent!")
+
+@bot.command()
 async def purge(ctx, amount: int):
-    deleted = await ctx.channel.purge(limit=amount + 1)
-    confirm = await ctx.send(f"🐾 successfully purged **{len(deleted)-1}** messages!"); await asyncio.sleep(3); await confirm.delete()
+    if not ctx.author.guild_permissions.manage_messages: return
+    await ctx.channel.purge(limit=amount + 1)
 
 @bot.command()
-@commands.has_permissions(manage_roles=True)
 async def role(ctx, member: discord.Member, *, search: str):
+    if not ctx.author.guild_permissions.manage_roles: return
     rid = search.replace("<@&", "").replace(">", "")
     if rid.isdigit(): r = ctx.guild.get_role(int(rid))
     else: r = discord.utils.find(lambda x: search.lower() in x.name.lower(), ctx.guild.roles)
@@ -198,51 +214,11 @@ async def role(ctx, member: discord.Member, *, search: str):
     if r in member.roles: await member.remove_roles(r); await ctx.send(f"🐾 Removed {r.name}")
     else: await member.add_roles(r); await ctx.send(f"🐾 Added {r.name}")
 
-@bot.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
-    e = discord.Embed(title="<a:000kitty:1484802888122503178> Banned from Kitten Paradise", color=HELP_HEX)
-    e.add_field(name="🐾 Reason:", value=reason, inline=False)
-    try: await member.send(embed=e)
-    except: pass
-    await member.ban(reason=reason); await ctx.send(f"🐾 **{member.name}** banned.")
-
-@bot.command()
-@commands.has_permissions(kick_members=True)
-async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
-    e = discord.Embed(title="<a:000kitty:1484802888122503178> Kicked from Kitten Paradise", color=HELP_HEX)
-    e.add_field(name="🐾 Reason:", value=reason, inline=False)
-    try: await member.send(embed=e)
-    except: pass
-    await member.kick(reason=reason); await ctx.send(f"🐾 **{member.name}** kicked.")
-
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, time: str, *, reason="No reason provided"):
-    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    duration = datetime.timedelta(seconds=int(time[:-1]) * time_dict[time[-1]])
-    e = discord.Embed(title="Time Out", color=HELP_HEX)
-    e.add_field(name="🐾 Duration:", value=time, inline=False)
-    e.add_field(name="🐾 Reason:", value=reason, inline=False)
-    try: await member.send(embed=e)
-    except: pass
-    await member.timeout(duration, reason=reason); await ctx.send(f"🐾 **{member.name}** timed out.")
-
 @bot.command(aliases=['avatar'])
 async def av(ctx, member: discord.Member = None):
     member = member or ctx.author
     url = member.avatar.url if member.avatar else member.default_avatar.url
     await ctx.send(embed=discord.Embed(title=f"🐾 {member.name}'s Avatar", color=BABY_PINK).set_image(url=url))
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def testboost(ctx):
-    boost_msg = ("<:xx_blank1308798611726794793:1500174266396704875> \n"
-                 "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
-                 "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
-                 "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
-                 f"                  . . ͡  ɞ {ctx.author.mention}")
-    await ctx.send(boost_msg)
 
 @bot.event
 async def on_ready():
