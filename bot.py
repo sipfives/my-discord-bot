@@ -14,7 +14,7 @@ intents.moderation = True
 
 bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
 
-# 2. Configuration (Triple-check these IDs in your server!)
+# 2. Configuration
 TICKET_CATEGORY_ID = 1484550188885475348
 TICKET_PROMPT_CHANNEL_ID = 1484049393387700336
 TIPS_CHANNEL_ID = 1484554927794819232
@@ -180,24 +180,36 @@ async def setup_ticket(ctx):
     if not ctx.author.guild_permissions.administrator: return
     channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
     await channel.send(DIVIDER_IMAGE)
-    e = discord.Embed(color=HELP_HEX)
-    e.description = ("<:xx_blank1308798611726794793:1500174266396704875>\n"
-                     "꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ\n"
-                     "<a:001heart:1494073417056649568> click button to mαke α ticket!\n"
-                     "*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>")
-    await channel.send(embed=e, view=TicketView())
-    await ctx.send("🐾 Ticket setup sent!")
+    embed = discord.Embed(color=HELP_HEX)
+    embed.description = (
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd <#1484554927794819232> before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568> click button to mαke α ticket!<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
+    )
+    embed.set_footer(text="chocolα - narko mαde me!")
+    await channel.send(embed=embed, view=TicketView())
+    await ctx.send("🐾 Ticket setup complete!")
 
 @bot.command()
 async def setuptips(ctx):
     if not ctx.author.guild_permissions.administrator: return
     channel = bot.get_channel(TIPS_CHANNEL_ID)
     await channel.send(DIVIDER_IMAGE)
-    e = discord.Embed(color=HELP_HEX)
-    e.description = ("<a:001heart:1494073417056649568> use drop down menu below\n"
-                     "*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>")
-    await channel.send(embed=e, view=TipsView())
-    await ctx.send("🐾 Tips setup sent!")
+    embed = discord.Embed(color=HELP_HEX)
+    embed.description = (
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness<:xx_blank1308798611726794793:1500174266396704875>**\n\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>use drop down menu below\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
+    )
+    await channel.send(embed=embed, view=TipsView())
+    await ctx.send("🐾 Staff tips sent!")
 
 @bot.command()
 async def purge(ctx, amount: int):
