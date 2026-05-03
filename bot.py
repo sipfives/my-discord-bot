@@ -148,11 +148,17 @@ async def check_pinkie_status():
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` | `.purge` | `.setup_ticket` | `.setuptips` | `.testboost` ", inline=False)
+    embed.add_field(name="🐾 **General**", value="`.help` | `.purge` | `.setup_ticket` | `.setuptips` | `.testboost` | `.div` ", inline=False)
     embed.add_field(name="🎁 **Events**", value="`.giveaway [time] [prize]` | `.reroll [msg_id]` ", inline=False)
     embed.add_field(name="🔨 **Moderation**", value="`.ban` | `.kick` | `.timeout` | `.role` | `.inrole` ", inline=False)
     embed.add_field(name="🖼️ **Profile**", value="`.av` | `.sav` | `.banner` | `.sbanner` | `.guildbanner` ", inline=False)
     await ctx.send(embed=embed)
+
+@bot.command()
+async def div(ctx):
+    """Sends the divider GIF manually."""
+    if not ctx.author.guild_permissions.manage_messages: return
+    await ctx.send(DIVIDER_IMAGE)
 
 @bot.command()
 async def giveaway(ctx, duration: str, *, prize: str):
@@ -212,9 +218,35 @@ async def setuptips(ctx):
     await ctx.send("🐾 Staff tips sent!")
 
 @bot.command()
-async def purge(ctx, amount: int):
-    if not ctx.author.guild_permissions.manage_messages: return
-    await ctx.channel.purge(limit=amount + 1)
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
+    e = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Banned", color=HELP_HEX)
+    e.add_field(name="🐾 Reason:", value=reason, inline=False)
+    try: await member.send(embed=e)
+    except: pass
+    await member.ban(reason=reason); await ctx.send(f"🐾 **{member.name}** banned.")
+
+@bot.command()
+@commands.has_permissions(kick_members=True)
+async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
+    e = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Kicked", color=HELP_HEX)
+    e.add_field(name="🐾 Reason:", value=reason, inline=False)
+    try: await member.send(embed=e)
+    except: pass
+    await member.kick(reason=reason); await ctx.send(f"🐾 **{member.name}** kicked.")
+
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def timeout(ctx, member: discord.Member, time: str, *, reason="No reason provided"):
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    duration = datetime.timedelta(seconds=int(time[:-1]) * time_dict[time[-1]])
+    e = discord.Embed(title="Meow! Time out! 🐱", color=HELP_HEX)
+    e.description = "Your talking privileges have been temporarily suspended. :3"
+    e.add_field(name="🐾 Duration:", value=time, inline=False)
+    e.add_field(name="🐾 Reason:", value=reason, inline=False)
+    try: await member.send(embed=e)
+    except: pass
+    await member.timeout(duration, reason=reason); await ctx.send(f"🐾 **{member.name}** timed out.")
 
 @bot.command()
 async def role(ctx, member: discord.Member, *, search: str):
