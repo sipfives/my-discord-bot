@@ -114,7 +114,7 @@ class TipsView(discord.ui.View):
         elif selection == "tips":
             e1 = discord.Embed(title="001 digital footprint & safety", color=HELP_HEX, description="be mindful— do not share your full legal name, number, address, school/workplace it is highly recommended that you use multitudes of various accounts, social media(s), email(s), and payment method(s) turn off location tags on your photo(s) when sending pictures one (only when it’s yours!) avoid presenting yourself into constant availability (appearing reachable 24/7), avoid using your own face if you are a MINOR (-18)\ndecide and set your own boundaries early on, and stick by them (t.o.s & <#1483875248083439719> still apply.) be vigilant! you’re smart girls— do not click suspicious payment links, or any in general— period.")
             e2 = discord.Embed(title="002. server culture", color=HELP_HEX, description="this can (& does) apply to our rules we uphold and promote here as well; no pressuring others to pass a person around— serious guys. we don’t treat people like prostitutes. they notice when you are attempting to share them, don’t do that. you’ll ruin it for yourself and others! do not utilize another person’s information as your own— it’s rude, and not yours; we’re all here to help each other out.")
-            e3 = discord.Embed(title="003. presenting your image", color=HELP_HEX, description="don’t be shy— put yourself out there! create a[n] intro, be thoughtful with information; don’t make it boring, plain or dry! this is a person’s first impression of you & factor if they reach out to you or not! we offer intro templates\nᲘ⑅𐑼 stagnating or being inactive in servers slows down your success rate of catching a person’s attention!\ninteract, have open ended convos— invite yourself in / invite others. friendly, modest & welcoming— those are the kind of things to get you noticed!\nᲘ⑅𐑼 watch your behavior avoid presenting pushy behavior early— it raises suspicion and concern avoid inserting things like “looking4edada” “spoil me” “looking4owner”, you will be flagged or blacklisted for appearing as a seller / beggar. this is an SFW server. selling and begging is prohibited.")
+            e3 = discord.Embed(title="003. presenting your image", color=HELP_HEX, description="don’t be shy— put yourself out there! create a[n] intro, be thoughtful with information; don’t make it boring, plain or dry! this is a person’s first impression of you & factor if they reach out to you or not! we offer intro templates\nᲘ⑅𐑼 stagnating or being inactive in servers slows down your success rate of catching a person’s attention!\ninteract, have open ended convos— invite yourself in / invite others. friendly, modest & welcoming— those are the kind of things to get you noticed!\nᲘ⑅𐑼 watch your behavior avoid presenting pushy behavior early— it raises suspicion and concern avoid inserting things like “looking4edada” \"spoil me\" \"looking4owner\", you will be flagged or blacklisted for appearing as a seller / beggar. this is an SFW server. selling and begging is prohibited.")
             e4 = discord.Embed(title="004. photo choices & profile building", color=HELP_HEX, description="the world is your stage— play different characters ;3!\ndon’t limit yourself off just to one personality or one identity; have a variety!\nᲘ⑅𐑼 when looking for images, select them carefully— if you’re going to be a certain girl with certain characteristics, only choose images regarding it!\nex. girl w bangs, mid-shoulder hair, etc. (you’d only select images containing those characteristics) if you literally need to, make a pinterest board to keep track of your new personalities be mindful, none of these images are meant to be sent with an intent to sell it for a price; for the love of my ladies n tos— we do not sell here.\np.s. you have other resources, do NOT use our girls in <#1483988599337783448>!!")
             e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or claimed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
             embeds = [e1, e2, e3, e4, e5]
@@ -267,30 +267,27 @@ async def testboost(ctx):
 @bot.event
 async def on_ready():
     print(f'Logged in αs {bot.user.name}')
+    # STATUS UPDATE:
+    await bot.change_presence(activity=discord.Game(name="discord.gg/pinkie - narko/vanilla made me"))
     bot.add_view(TipsView()); bot.add_view(TicketView()); bot.add_view(CloseTicketView())
     if not check_pinkie_status.is_running(): check_pinkie_status.start()
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user: return
-    
-    # NEW THREAD SUPPORT: Check parents for clean/log logic
     current_id = message.channel.id
     parent_id = getattr(message.channel, "parent_id", None)
-    
-    # Check if channel OR parent channel is in CLEAN_CHANNEL_IDS
     if current_id in CLEAN_CHANNEL_IDS or parent_id in CLEAN_CHANNEL_IDS:
         target_id = current_id if current_id in CLEAN_CHANNEL_IDS else parent_id
         custom_msg = CLEAN_CHANNEL_IDS[target_id]
         async for old in message.channel.history(limit=10):
             if old.author == bot.user and old.content == custom_msg: await old.delete(); break
         await message.channel.send(custom_msg); return
-
-    # Check if channel OR parent channel is in LOG_CHANNEL_IDS
     if current_id in LOG_CHANNEL_IDS or parent_id in LOG_CHANNEL_IDS:
         target_id = current_id if current_id in LOG_CHANNEL_IDS else parent_id
         await message.channel.send(LOG_CHANNEL_IDS[target_id])
-    
     await bot.process_commands(message)
 
-bot.run(os.environ.get('DISCORD_TOKEN'))
+token = os.environ.get('DISCORD_TOKEN')
+if token: bot.run(token)
+else: print("❌ ERROR: DISCORD_TOKEN not found!")
