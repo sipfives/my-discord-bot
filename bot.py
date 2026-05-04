@@ -33,6 +33,7 @@ STATUS_TRIGGER = "/pinkie"
 HELP_HEX = 0xFFD4F4 
 BABY_PINK = 0xFFB6C1
 DIVIDER_IMAGE = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png"
+GIPHY_DIVIDER = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 
 CLEAN_CHANNEL_IDS = {
     1484730031048491049: "only post real scammers. youll be warned if you send any nsfw messages.",
@@ -40,8 +41,8 @@ CLEAN_CHANNEL_IDS = {
 }
 
 LOG_CHANNEL_IDS = {
-    1499948539424411863: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif",
-    1499947145296351242: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
+    1499948539424411863: GIPHY_DIVIDER,
+    1499947145296351242: GIPHY_DIVIDER
 }
 
 # --- CLOSE BUTTON LOGIC ---
@@ -124,8 +125,8 @@ class TipsView(discord.ui.View):
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
-# --- BACKGROUND TASK ---
-@tasks.loop(seconds=30)
+# --- BACKGROUND TASK: Status Role ---
+@tasks.loop(seconds=15)
 async def check_pinkie_status():
     for guild in bot.guilds:
         role = discord.utils.get(guild.roles, name=STATUS_ROLE_NAME)
@@ -135,8 +136,10 @@ async def check_pinkie_status():
             has_trigger = False
             for act in member.activities:
                 if isinstance(act, discord.CustomActivity):
-                    text = (act.name or "") + (act.state or "")
-                    if STATUS_TRIGGER in text.lower(): has_trigger = True; break
+                    text = (str(act.name) if act.name else "") + (str(act.state) if act.state else "")
+                    if STATUS_TRIGGER in text.lower():
+                        has_trigger = True
+                        break
             if has_trigger and role not in member.roles:
                 try: await member.add_roles(role)
                 except: pass
@@ -156,9 +159,54 @@ async def help(ctx):
 
 @bot.command()
 async def div(ctx):
-    """Sends the divider GIF manually."""
     if not ctx.author.guild_permissions.manage_messages: return
-    await ctx.send(DIVIDER_IMAGE)
+    await ctx.send(GIPHY_DIVIDER)
+
+@bot.command()
+async def ban(ctx, member: discord.Member = None, *, reason="No reason provided"):
+    if not ctx.author.guild_permissions.ban_members: return
+    if member is None:
+        embed = discord.Embed(title="🔨 Ban Command", color=HELP_HEX, description="Bans α member from the server.")
+        embed.add_field(name="🐾 Usage:", value="`.ban [@user] [reason]`")
+        embed.add_field(name="🐾 Example:", value="`.ban @narko being too cute`")
+        return await ctx.send(embed=embed)
+    e = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Banned", color=HELP_HEX)
+    e.add_field(name="🐾 Reason:", value=reason, inline=False)
+    try: await member.send(embed=e)
+    except: pass
+    await member.ban(reason=reason); await ctx.send(f"🐾 **{member.name}** banned.")
+
+@bot.command()
+async def kick(ctx, member: discord.Member = None, *, reason="No reason provided"):
+    if not ctx.author.guild_permissions.kick_members: return
+    if member is None:
+        embed = discord.Embed(title="🔨 Kick Command", color=HELP_HEX, description="Kicks α member from the server.")
+        embed.add_field(name="🐾 Usage:", value="`.kick [@user] [reason]`")
+        embed.add_field(name="🐾 Example:", value="`.kick @narko no reason`")
+        return await ctx.send(embed=embed)
+    e = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Kicked", color=HELP_HEX)
+    e.add_field(name="🐾 Reason:", value=reason, inline=False)
+    try: await member.send(embed=e)
+    except: pass
+    await member.kick(reason=reason); await ctx.send(f"🐾 **{member.name}** kicked.")
+
+@bot.command()
+async def timeout(ctx, member: discord.Member = None, time: str = None, *, reason="No reason provided"):
+    if not ctx.author.guild_permissions.moderate_members: return
+    if member is None or time is None:
+        embed = discord.Embed(title="🔨 Timeout Command", color=HELP_HEX, description="Temporarily mutes α member.")
+        embed.add_field(name="🐾 Usage:", value="`.timeout [@user] [time] [reason]`")
+        embed.add_field(name="🐾 Example:", value="`.timeout @narko 10m stop spamming`")
+        return await ctx.send(embed=embed)
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    duration = datetime.timedelta(seconds=int(time[:-1]) * time_dict[time[-1]])
+    e = discord.Embed(title="Meow! Time out! 🐱", color=HELP_HEX)
+    e.description = "Your talking privileges have been temporarily suspended. :3"
+    e.add_field(name="🐾 Duration:", value=time, inline=False)
+    e.add_field(name="🐾 Reason:", value=reason, inline=False)
+    try: await member.send(embed=e)
+    except: pass
+    await member.timeout(duration, reason=reason); await ctx.send(f"🐾 **{member.name}** timed out.")
 
 @bot.command()
 async def giveaway(ctx, duration: str, *, prize: str):
@@ -172,14 +220,6 @@ async def giveaway(ctx, duration: str, *, prize: str):
     users = [u async for u in new_msg.reactions[0].users() if not u.bot]
     if not users: await ctx.send("No entries. 💔")
     else: await ctx.send(f"🎉 **CONGRATS** <@{random.choice(users).id}>! You won **{prize}**!")
-
-@bot.command()
-async def reroll(ctx, message_id: int):
-    if not ctx.author.guild_permissions.manage_messages: return
-    msg = await ctx.channel.fetch_message(message_id)
-    users = [u async for u in msg.reactions[0].users() if not u.bot]
-    if not users: await ctx.send("No entries found.")
-    else: await ctx.send(f"🎉 **NEW WINNER:** <@{random.choice(users).id}>!")
 
 @bot.command()
 async def setup_ticket(ctx):
@@ -218,37 +258,6 @@ async def setuptips(ctx):
     await ctx.send("🐾 Staff tips sent!")
 
 @bot.command()
-@commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
-    e = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Banned", color=HELP_HEX)
-    e.add_field(name="🐾 Reason:", value=reason, inline=False)
-    try: await member.send(embed=e)
-    except: pass
-    await member.ban(reason=reason); await ctx.send(f"🐾 **{member.name}** banned.")
-
-@bot.command()
-@commands.has_permissions(kick_members=True)
-async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
-    e = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Kicked", color=HELP_HEX)
-    e.add_field(name="🐾 Reason:", value=reason, inline=False)
-    try: await member.send(embed=e)
-    except: pass
-    await member.kick(reason=reason); await ctx.send(f"🐾 **{member.name}** kicked.")
-
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, time: str, *, reason="No reason provided"):
-    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    duration = datetime.timedelta(seconds=int(time[:-1]) * time_dict[time[-1]])
-    e = discord.Embed(title="Meow! Time out! 🐱", color=HELP_HEX)
-    e.description = "Your talking privileges have been temporarily suspended. :3"
-    e.add_field(name="🐾 Duration:", value=time, inline=False)
-    e.add_field(name="🐾 Reason:", value=reason, inline=False)
-    try: await member.send(embed=e)
-    except: pass
-    await member.timeout(duration, reason=reason); await ctx.send(f"🐾 **{member.name}** timed out.")
-
-@bot.command()
 async def role(ctx, member: discord.Member, *, search: str):
     if not ctx.author.guild_permissions.manage_roles: return
     rid = search.replace("<@&", "").replace(">", "")
@@ -284,6 +293,7 @@ async def on_message(message):
     if cid in LOG_CHANNEL_IDS or pid in LOG_CHANNEL_IDS:
         target = cid if cid in LOG_CHANNEL_IDS else pid
         await message.channel.send(LOG_CHANNEL_IDS[target])
+    
     await bot.process_commands(message)
 
 token = os.environ.get('DISCORD_TOKEN')
