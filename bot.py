@@ -26,9 +26,11 @@ AUTHORIZED_CLOSE_ROLES = [1483887906031669278, 1483884626605768785, 148429412051
 STATUS_TRIGGER = "/pinkie"
 HELP_HEX = 0xFFD4F4 
 BABY_PINK = 0xFFB6C1
+
+# FIXED: Using the Bow PNG for Setup and Giphy for Logs/Div
+BOW_DIVIDER = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png"
 GIPHY_DIVIDER = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 
-# Checklist #4: Role tracking
 assigned_by_bot = set()
 
 CLEAN_CHANNEL_IDS = {
@@ -41,7 +43,7 @@ LOG_CHANNEL_IDS = {
     1499947145296351242: GIPHY_DIVIDER
 }
 
-# --- CHECKLIST #2: Ticket & Tip Persistent Interactions ---
+# --- PERSISTENT VIEWS ---
 class CloseTicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -62,7 +64,7 @@ class TicketView(discord.ui.View):
         chan = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=cat, overwrites=overwrites)
         await chan.send(embed=discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX))
         await chan.send(content=f"<@&{STAFF_ROLE_ID}>", embed=discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX), view=CloseTicketView())
-        await interaction.response.send_message(f"🐾 Ticket opened! {channel.mention}", ephemeral=True)
+        await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
 
 class TipsView(discord.ui.View):
     def __init__(self):
@@ -85,12 +87,12 @@ class TipsView(discord.ui.View):
             e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or claimed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
             embeds = [e1, e2, e3, e4, e5]
         elif selection == "awareness":
-            e1 = discord.Embed(color=HELP_HEX, description="if you feel hesitant, something feel’s off/sketchy or you’certain if you’re safe; please if applicable— take the quick route and block as soon as you feel in danger.\nᲘ⑅𐑼 if severity is amped; do not hesitate to reach out and bring in administration for help; if any do not respond, follow up the chain of command (helpers to mods to admin to owners) we’re always happy to help, and we value ensuring your safety babies! if it’s just uncertainty of how to answer a dm, and no severity or harm, feel free to ask other ladies; allow yourself to be open to different perspectives and opinions! ladies if you’re responding, administration or a member, please provide advice that falls under our server’s rules and t.o.s guidelines")
+            e1 = discord.Embed(color=HELP_HEX, description="if you feel hesitant, something feel’s off/sketchy or you’re uncertain if you’re safe; please if applicable— take the quick route and block as soon as you feel in danger.\nᲘ⑅𐑼 if severity is amped; do not hesitate to reach out and bring in administration for help; if any do not respond, follow up the chain of command (helpers to mods to admin to owners) we’re always happy to help, and we value ensuring your safety babies! if it’s just uncertainty of how to answer a dm, and no severity or harm, feel free to ask other ladies; allow yourself to be open to different perspectives and opinions! ladies if you’re responding, administration or a member, please provide advice that falls under our server’s rules and t.o.s guidelines")
             e2 = discord.Embed(color=HELP_HEX, description="anybody who urges you to click α link, join α call, download an app, or give your password is trying to scam you or steal your information. be mindful.\nstay away from new accounts, anybody who claims to be α 'sugardaddy,' or anyone who wants you to pay first before receiving any type of payment!")
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
-# --- CHECKLIST #4: Pic Perms Status Tracking ---
+# --- STATUS TASK ---
 @tasks.loop(seconds=15)
 async def check_pinkie_status():
     for guild in bot.guilds:
@@ -113,7 +115,7 @@ async def check_pinkie_status():
                     try: await member.remove_roles(role)
                     except: pass
 
-# --- COMMANDS: Setup & Help ---
+# --- COMMANDS ---
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", color=BABY_PINK)
@@ -126,8 +128,8 @@ async def help(ctx):
 @bot.command()
 async def setup_ticket(ctx):
     channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
-    if not channel: return await ctx.send("❌ Channel Error!")
-    await channel.send(GIPHY_DIVIDER)
+    if not channel: return await ctx.send("❌ Channel ID Invalid!")
+    await channel.send(BOW_DIVIDER)
     e = discord.Embed(color=HELP_HEX)
     e.description = ("<:xx_blank1308798611726794793:1500174266396704875>\n"
                      "꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ\n"
@@ -141,8 +143,8 @@ async def setup_ticket(ctx):
 @bot.command()
 async def setuptips(ctx):
     channel = bot.get_channel(TIPS_CHANNEL_ID)
-    if not channel: return await ctx.send("❌ Channel Error!")
-    await channel.send(GIPHY_DIVIDER)
+    if not channel: return await ctx.send("❌ Channel ID Invalid!")
+    await channel.send(BOW_DIVIDER)
     e = discord.Embed(color=HELP_HEX)
     e.description = ("<:xx_blank1308798611726794793:1500174266396704875>\n"
                      "**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness**\n\n"
@@ -152,7 +154,10 @@ async def setuptips(ctx):
     await channel.send(embed=e, view=TipsView())
     await ctx.send("🐾 Staff tips sent!")
 
-# --- COMMANDS: Moderation ---
+@bot.command()
+async def div(ctx):
+    await ctx.send(GIPHY_DIVIDER)
+
 @bot.command()
 async def ban(ctx, member: discord.Member = None, *, reason="No reason provided"):
     if not ctx.author.guild_permissions.ban_members: return
@@ -189,7 +194,6 @@ async def timeout(ctx, member: discord.Member = None, time: str = None, *, reaso
     except: pass
     await member.timeout(duration, reason=reason); await ctx.send(f"🐾 **{member.name}** timed out.")
 
-# --- COMMANDS: Roles & Fun ---
 @bot.command()
 async def role(ctx, member: discord.Member, *, role_input: str):
     if not ctx.author.guild_permissions.manage_roles: return
@@ -208,17 +212,57 @@ async def inrole(ctx, *, role_input: str):
     pings = "\n".join([f"• {m.mention}" for m in members]) or "No one has this role!"
     await ctx.send(embed=discord.Embed(title=f"Members with {role.name}", description=pings, color=BABY_PINK))
 
-@bot.command(aliases=['avatar'])
+@bot.command()
 async def av(ctx, member: discord.Member = None):
     member = member or ctx.author
     url = member.avatar.url if member.avatar else member.default_avatar.url
     await ctx.send(embed=discord.Embed(title=f"🐾 {member.name}'s Avatar", color=BABY_PINK).set_image(url=url))
 
 @bot.command()
-async def div(ctx):
-    await ctx.send(GIPHY_DIVIDER)
+async def sav(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    if not member.guild_avatar: return await ctx.send("🐾 This user doesn't have α server avatar!")
+    await ctx.send(embed=discord.Embed(title=f"🐾 {member.name}'s Server Avatar", color=BABY_PINK).set_image(url=member.guild_avatar.url))
 
-# --- EVENTS ---
+@bot.command()
+async def banner(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    user = await bot.fetch_user(member.id)
+    if not user.banner: return await ctx.send("🐾 This user doesn't have α banner!")
+    await ctx.send(embed=discord.Embed(title=f"🐾 {member.name}'s Banner", color=BABY_PINK).set_image(url=user.banner.url))
+
+@bot.command()
+async def sbanner(ctx):
+    if not ctx.guild.banner: return await ctx.send("🐾 This server doesn't have α banner!")
+    await ctx.send(embed=discord.Embed(title=f"🐾 {ctx.guild.name}'s Banner", color=BABY_PINK).set_image(url=ctx.guild.banner.url))
+
+@bot.command()
+async def guildbanner(ctx):
+    await sbanner(ctx)
+
+@bot.command()
+async def giveaway(ctx, duration: str, *, prize: str):
+    if not ctx.author.guild_permissions.manage_messages: return
+    time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    seconds = int(duration[:-1]) * time_dict.get(duration[-1], 60)
+    embed = discord.Embed(title="🎀 **KITTEN PARADISE GIVEAWAY** 🎀", description=f"React with 🎉!\n\n**Prize:** {prize}\n**Ends in:** {duration}", color=BABY_PINK)
+    g_msg = await ctx.send(embed=embed); await g_msg.add_reaction("🎉")
+    await asyncio.sleep(seconds)
+    new_msg = await ctx.channel.fetch_message(g_msg.id)
+    users = [u async for u in new_msg.reactions[0].users() if not u.bot]
+    if users: await ctx.send(f"🎉 **CONGRATS** <@{random.choice(users).id}>! You won **{prize}**!")
+
+@bot.command()
+async def testboost(ctx):
+    boost_chan = bot.get_channel(BOOST_CHANNEL_ID)
+    if not boost_chan: return
+    msg = ("<:xx_blank1308798611726794793:1500174266396704875> \n"
+           "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
+           "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
+           "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
+           f"                  . . ͡  ɞ {ctx.author.mention}")
+    await boost_chan.send(msg)
+
 @bot.event
 async def on_ready():
     print(f'Logged in αs {bot.user.name}')
