@@ -27,7 +27,6 @@ STATUS_TRIGGER = "/pinkie"
 HELP_HEX = 0xFFD4F4 
 BABY_PINK = 0xFFB6C1
 
-# FIXED: Using the Bow PNG for Setup and Giphy for Logs/Div
 BOW_DIVIDER = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png"
 GIPHY_DIVIDER = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 
@@ -87,7 +86,7 @@ class TipsView(discord.ui.View):
             e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or claimed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
             embeds = [e1, e2, e3, e4, e5]
         elif selection == "awareness":
-            e1 = discord.Embed(color=HELP_HEX, description="if you feel hesitant, something feel’s off/sketchy or you’re uncertain if you’re safe; please if applicable— take the quick route and block as soon as you feel in danger.\nᲘ⑅𐑼 if severity is amped; do not hesitate to reach out and bring in administration for help; if any do not respond, follow up the chain of command (helpers to mods to admin to owners) we’re always happy to help, and we value ensuring your safety babies! if it’s just uncertainty of how to answer a dm, and no severity or harm, feel free to ask other ladies; allow yourself to be open to different perspectives and opinions! ladies if you’re responding, administration or a member, please provide advice that falls under our server’s rules and t.o.s guidelines")
+            e1 = discord.Embed(color=HELP_HEX, description="if you feel hesitant, something feel’s off/sketchy or you’certain if you’re safe; please if applicable— take the quick route and block as soon as you feel in danger.\nᲘ⑅𐑼 if severity is amped; do not hesitate to reach out and bring in administration for help; if any do not respond, follow up the chain of command (helpers to mods to admin to owners) we’re always happy to help, and we value ensuring your safety babies! if it’s just uncertainty of how to answer a dm, and no severity or harm, feel free to ask other ladies; allow yourself to be open to different perspectives and opinions! ladies if you’re responding, administration or a member, please provide advice that falls under our server’s rules and t.o.s guidelines")
             e2 = discord.Embed(color=HELP_HEX, description="anybody who urges you to click α link, join α call, download an app, or give your password is trying to scam you or steal your information. be mindful.\nstay away from new accounts, anybody who claims to be α 'sugardaddy,' or anyone who wants you to pay first before receiving any type of payment!")
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
@@ -128,29 +127,38 @@ async def help(ctx):
 @bot.command()
 async def setup_ticket(ctx):
     channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
-    if not channel: return await ctx.send("❌ Channel ID Invalid!")
+    if not channel: return
     await channel.send(BOW_DIVIDER)
     e = discord.Embed(color=HELP_HEX)
-    e.description = ("<:xx_blank1308798611726794793:1500174266396704875>\n"
-                     "꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ\n"
-                     "<a:001heart:1494073417056649568> reαd <#1484554927794819232> before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-                     "<a:001heart:1494073417056649568> click button to mαke α ticket!\n"
-                     "*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>")
+    # RESTORED: All blank emojis for alignment
+    e.description = (
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd <#1484554927794819232> before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568> click button to mαke α ticket!<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
+    )
     e.set_footer(text="chocolα - narko mαde me!")
     await channel.send(embed=e, view=TicketView())
-    await ctx.send("🐾 Ticket setup sent!")
+    await ctx.send("🐾 Ticket setup complete!")
 
 @bot.command()
 async def setuptips(ctx):
     channel = bot.get_channel(TIPS_CHANNEL_ID)
-    if not channel: return await ctx.send("❌ Channel ID Invalid!")
+    if not channel: return
     await channel.send(BOW_DIVIDER)
     e = discord.Embed(color=HELP_HEX)
-    e.description = ("<:xx_blank1308798611726794793:1500174266396704875>\n"
-                     "**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness**\n\n"
-                     "<a:001heart:1494073417056649568> use drop down menu below\n"
-                     "<a:001heart:1494073417056649568> reαd before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-                     "*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>")
+    # RESTORED: All blank emojis for alignment
+    e.description = (
+        "<:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
+        "<:xx_blank1308798611726794793:1500174266396704875>**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness<:xx_blank1308798611726794793:1500174266396704875>**\n\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>use drop down menu below\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
+        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
+    )
     await channel.send(embed=e, view=TipsView())
     await ctx.send("🐾 Staff tips sent!")
 
