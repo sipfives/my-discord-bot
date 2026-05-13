@@ -52,7 +52,27 @@ LOG_CHANNEL_IDS = {
     1499947145296351242: GIPHY_DIVIDER
 }
 
-# --- NEW: PERSISTENT GIVEAWAY VIEW (Matching image_74dab7.png) ---
+# --- HELPER: RELAXED SEARCH ---
+def find_role_relaxed(guild, search_text):
+    """Lifts the requirement to copy decor exactly."""
+    search_text = search_text.lower()
+    # Check ID first
+    rid = re.sub(r'\D', '', search_text)
+    if rid and len(rid) > 15:
+        role = guild.get_role(int(rid))
+        if role: return role
+
+    # Fuzzy match: Ignore case and check if search_text is inside the role name
+    for role in guild.roles:
+        # Clean the role name of special characters for comparison
+        clean_name = re.sub(r'[^\w\s]', '', role.name).lower()
+        clean_search = re.sub(r'[^\w\s]', '', search_text).lower()
+        
+        if clean_search in clean_name or search_text in role.name.lower():
+            return role
+    return None
+
+# --- PERSISTENT GIVEAWAY VIEW ---
 class GiveawayView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -65,14 +85,13 @@ class GiveawayView(discord.ui.View):
         self.participants.append(interaction.user.id)
         await interaction.response.send_message("🐾 You've entered the giveaway! Good luck!", ephemeral=True)
 
-# --- PERSISTENT VIEWS (Originals preserved) ---
+# --- PERSISTENT VIEWS ---
 class CloseTicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
     @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.danger, emoji="🔒", custom_id="close_ticket_btn")
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if any(r.id in AUTHORIZED_CLOSE_ROLES for r in interaction.user.roles):
-            # NEW: Ask for reason before closing to DM the member
             await interaction.response.send_message("🐾 Please type the **reason** for closing this ticket below:")
             
             def check(m):
@@ -82,7 +101,6 @@ class CloseTicketView(discord.ui.View):
                 reason_msg = await bot.wait_for("message", timeout=60.0, check=check)
                 reason = reason_msg.content
                 
-                # DM the ticket opener
                 for member in interaction.channel.members:
                     if not member.bot and not any(r.id in AUTHORIZED_CLOSE_ROLES for r in member.roles):
                         try:
@@ -97,7 +115,6 @@ class CloseTicketView(discord.ui.View):
                 await interaction.channel.send("🐾 Close request timed out. Click the button to try again!")
         else: await interaction.response.send_message("🐾 Sorry, only staff can close tickets! meow", ephemeral=True)
 
-# [TicketView and TipsView remain identical to your original provided code]
 class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -142,7 +159,7 @@ class TipsView(discord.ui.View):
             embeds = [e1, e2]
         await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
-# --- STATUS TASK (Preserved) ---
+# --- STATUS TASK ---
 @tasks.loop(seconds=15)
 async def check_pinkie_status():
     for guild in bot.guilds:
@@ -180,7 +197,6 @@ async def purge(ctx, amount: int):
     if not ctx.author.guild_permissions.manage_messages: return
     await ctx.channel.purge(limit=amount + 1)
 
-# --- GIVEAWAY UPDATED (Matching image_74dab7.png) ---
 @bot.command()
 async def giveaway(ctx, duration: str, winners: int, *, prize: str):
     """🐾 Example: .giveaway 3d 1 dual bayonets"""
@@ -215,36 +231,22 @@ async def giveaway(ctx, duration: str, winners: int, *, prize: str):
 
 @bot.command()
 async def reroll(ctx, msg_id: int):
-    """🐾 Example: .reroll 123456789"""
     if not ctx.author.guild_permissions.manage_messages: return
-    # This assumes we have a way to track participants from the msg_id, 
-    # for now we pick a random person who reacted to the message with 🎉
     try:
         msg = await ctx.channel.fetch_message(msg_id)
         users = [u async for u in msg.reactions[0].users() if not u.bot]
         if users: await ctx.send(f"🎉 **REROLL!** Congrats <@{random.choice(users).id}>!")
     except: await ctx.send("🐾 Couldn't find that message or reactions!")
 
-# --- INROLE (Updated to exclude left members & match decor exactly) ---
 @bot.command()
 async def inrole(ctx, *, role_input: str):
-    """🐾 Example: ,inrole 🎀 • Members"""
-    # Matches the role name EXACTLY including decor
-    role = discord.utils.get(ctx.guild.roles, name=role_input)
-    if not role: 
-        # Backup: Try by ID if decor is stripped
-        rid = role_input.replace("<@&", "").replace(">", "")
-        if rid.isdigit(): role = ctx.guild.get_role(int(rid))
+    """🐾 Example: .inrole members"""
+    role = find_role_relaxed(ctx.guild, role_input)
+    if not role: return await ctx.send(embed=discord.Embed(description="🐾 Role not found!", color=BABY_PINK))
 
-    if not role: return await ctx.send(embed=discord.Embed(description="🐾 Role not found! Ensure decor is copied exactly.", color=BABY_PINK))
-
-    # Only show active members
     active_members = [m for m in role.members if ctx.guild.get_member(m.id)]
-    
-    if not active_members:
-        return await ctx.send(embed=discord.Embed(description="🐾 No active members in this role!", color=BABY_PINK))
+    if not active_members: return await ctx.send(embed=discord.Embed(description="🐾 No active members!", color=BABY_PINK))
 
-    # Pagination logic
     pages = [active_members[i:i + 15] for i in range(0, len(active_members), 15)]
     current_page = 0
 
@@ -267,18 +269,12 @@ async def inrole(ctx, *, role_input: str):
                 await message.remove_reaction(reaction, user)
             except asyncio.TimeoutError: break
 
-# --- MODERATION (Updated with User ID support & DM names) ---
 @bot.command()
 async def ban(ctx, target=None, *, reason="No reason provided"):
-    """🐾 Example: .ban 123456789 Spamming"""
     if not ctx.author.guild_permissions.ban_members: return
-    if target is None:
-        return await ctx.send(embed=discord.Embed(title="🔨 Ban Command", color=HELP_HEX, description="🐾 **Usage:** `.ban [user_id or @user] [reason]`\n🐾 **Example:** `.ban 1234567890 no reason`"))
-    
-    # Try ID first for off-server bans
+    if target is None: return await ctx.send("🐾 Please provide a User ID or mention!")
     user_id = int(re.sub(r'\D', '', target))
     user = await bot.fetch_user(user_id)
-    
     dm = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Banned", color=HELP_HEX)
     dm.description = f"You have been banned from **{SERVER_NAME_MOD}**"
     dm.add_field(name="🐾 Reason:", value=reason, inline=False)
@@ -288,7 +284,6 @@ async def ban(ctx, target=None, *, reason="No reason provided"):
 
 @bot.command()
 async def unban(ctx, user_id: int):
-    """🐾 Example: .unban 123456789"""
     if not ctx.author.guild_permissions.ban_members: return
     user = await bot.fetch_user(user_id)
     await ctx.guild.unban(user)
@@ -296,17 +291,14 @@ async def unban(ctx, user_id: int):
 
 @bot.command()
 async def untimeout(ctx, member: discord.Member):
-    """🐾 Example: .untimeout @user"""
     if not ctx.author.guild_permissions.moderate_members: return
     await member.timeout(None)
     await ctx.send(f"🐾 Removed timeout from {member.mention}.")
 
-# [Keep original kick/timeout/setup commands...]
 @bot.command()
 async def kick(ctx, member: discord.Member = None, *, reason="No reason provided"):
     if not ctx.author.guild_permissions.kick_members: return
-    if member is None:
-        return await ctx.send(embed=discord.Embed(title="🔨 Kick Command", color=HELP_HEX, description="🐾 **Usage:** `.kick [@user] [reason]`\n🐾 **Example:** `.kick @narko no reason`"))
+    if member is None: return await ctx.send("🐾 Please mention a member!")
     dm = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Kicked", color=HELP_HEX)
     dm.description = f"You have been kicked from **{SERVER_NAME_MOD}**"
     dm.add_field(name="🐾 Reason:", value=reason, inline=False)
@@ -317,11 +309,10 @@ async def kick(ctx, member: discord.Member = None, *, reason="No reason provided
 @bot.command()
 async def timeout(ctx, member: discord.Member = None, time_str: str = None, *, reason="No reason provided"):
     if not ctx.author.guild_permissions.moderate_members: return
-    if member is None or time_str is None:
-        return await ctx.send(embed=discord.Embed(title="🔨 Timeout Command", color=HELP_HEX, description="🐾 **Usage:** `.timeout [@user] [time] [reason]`\n🐾 **Example:** `.timeout @narko 10m stop spamming`"))
+    if member is None or time_str is None: return await ctx.send("🐾 Use format: .timeout @user 10m reason")
     time_dict = {"s": 1, "m": 60, "h": 3600, "d": 86400}
     duration = datetime.timedelta(seconds=int(time_str[:-1]) * time_dict[time_str[-1]])
-    dm = discord.Embed(title="Meow! Time out! 🐱", description=f"Your talking privileges in **{SERVER_NAME_MOD}** have been suspended. :3", color=HELP_HEX)
+    dm = discord.Embed(title="Meow! Time out! 🐱", description=f"Your talking privileges in **{SERVER_NAME_MOD}** have been suspended.", color=HELP_HEX)
     dm.add_field(name="🐾 Duration:", value=time_str, inline=False)
     dm.add_field(name="🐾 Reason:", value=reason, inline=False)
     try: await member.send(embed=dm)
@@ -331,48 +322,14 @@ async def timeout(ctx, member: discord.Member = None, time_str: str = None, *, r
 @bot.command()
 async def role(ctx, member: discord.Member, *, role_input: str):
     if not ctx.author.guild_permissions.manage_roles: return
-    rid = role_input.replace("<@&", "").replace(">", "")
-    role_obj = ctx.guild.get_role(int(rid)) if rid.isdigit() else discord.utils.find(lambda r: r.name.lower() == role_input.lower(), ctx.guild.roles)
+    role_obj = find_role_relaxed(ctx.guild, role_input)
     if not role_obj: return await ctx.send("🐾 Role not found!")
-    if role_obj in member.roles: await member.remove_roles(role_obj); await ctx.send(embed=discord.Embed(description=f"🐾 Removed **{role_obj.name}**", color=BABY_PINK))
-    else: await member.add_roles(role_obj); await ctx.send(embed=discord.Embed(description=f"🐾 Added **{role_obj.name}**", color=BABY_PINK))
-
-# [Keep original Profile & Utility commands...]
-@bot.command()
-async def setup_ticket(ctx):
-    channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
-    if not channel: return
-    await channel.send(BOW_DIVIDER)
-    e = discord.Embed(color=HELP_HEX)
-    e.description = (
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd <#1484554927794819232> before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568> click button to mαke α ticket!<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
-    )
-    e.set_footer(text="chocolα - narko mαde me!")
-    await channel.send(embed=e, view=TicketView())
-    await ctx.send("🐾 Ticket setup complete!")
-
-@bot.command()
-async def setuptips(ctx):
-    channel = bot.get_channel(TIPS_CHANNEL_ID)
-    if not channel: return
-    await channel.send(BOW_DIVIDER)
-    e = discord.Embed(color=HELP_HEX)
-    e.description = (
-        "<:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>\n"
-        "<:xx_blank1308798611726794793:1500174266396704875>**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness<:xx_blank1308798611726794793:1500174266396704875>**\n\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>use drop down menu below\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><a:001heart:1494073417056649568>reαd before mαking α [ticket](https://discord.com/channels/1483873672208056511/1484049393387700336)\n"
-        "<:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875><:xx_blank1308798611726794793:1500174266396704875>*⋆ ୨୧‧˚ ⋆ ୨୧‧˚* <a:1cutesy:1499882522685870100>"
-    )
-    await channel.send(embed=e, view=TipsView())
-    await ctx.send("🐾 Staff tips sent!")
+    if role_obj in member.roles: 
+        await member.remove_roles(role_obj)
+        await ctx.send(embed=discord.Embed(description=f"🐾 Removed **{role_obj.name}**", color=BABY_PINK))
+    else: 
+        await member.add_roles(role_obj)
+        await ctx.send(embed=discord.Embed(description=f"🐾 Added **{role_obj.name}**", color=BABY_PINK))
 
 @bot.command()
 async def av(ctx, member: discord.Member = None):
@@ -383,19 +340,19 @@ async def av(ctx, member: discord.Member = None):
 @bot.command()
 async def sav(ctx, member: discord.Member = None):
     member = member or ctx.author
-    if not member.guild_avatar: return await ctx.send("🐾 This user doesn't have α server avatar!")
+    if not member.guild_avatar: return await ctx.send("🐾 No server avatar!")
     await ctx.send(embed=discord.Embed(title=f"🐾 {member.name}'s Server Avatar", color=BABY_PINK).set_image(url=member.guild_avatar.url))
 
 @bot.command()
 async def banner(ctx, member: discord.Member = None):
     member = member or ctx.author
     user = await bot.fetch_user(member.id)
-    if not user.banner: return await ctx.send("🐾 This user doesn't have α banner!")
+    if not user.banner: return await ctx.send("🐾 No banner!")
     await ctx.send(embed=discord.Embed(title=f"🐾 {member.name}'s Banner", color=BABY_PINK).set_image(url=user.banner.url))
 
 @bot.command()
 async def sbanner(ctx):
-    if not ctx.guild.banner: return await ctx.send("🐾 This server doesn't have α banner!")
+    if not ctx.guild.banner: return await ctx.send("🐾 No server banner!")
     await ctx.send(embed=discord.Embed(title=f"🐾 {ctx.guild.name}'s Banner", color=BABY_PINK).set_image(url=ctx.guild.banner.url))
 
 @bot.command()
@@ -405,21 +362,44 @@ async def guildbanner(ctx): await sbanner(ctx)
 async def testboost(ctx):
     boost_chan = bot.get_channel(BOOST_CHANNEL_ID)
     if not boost_chan: return
-    msg = ("<:xx_blank1308798611726794793:1500174266396704875> \n"
-           "                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140> \n"
-           "<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
-           "                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
+    msg = (f"<:xx_blank1308798611726794793:1500174266396704875>\n"
+           f"                          <a:0ggoki:1492955057359028365><a:0ggoki:1492955061662253140>\n"
+           f"<:xx_blank1308798611726794793:1500174266396704875>     ﹒**thαnk you for boosting**\n"
+           f"                     <a:000paw:1486941220222664843>     ֪ __kitten__ ⑅\n"
            f"                  . . ͡  ɞ {ctx.author.mention}")
     await boost_chan.send(msg)
 
 @bot.command()
 async def div(ctx): await ctx.send(GIPHY_DIVIDER)
 
-# --- EVENTS & STATUS ---
+@bot.command()
+async def setup_ticket(ctx):
+    channel = bot.get_channel(TICKET_PROMPT_CHANNEL_ID)
+    if not channel: return
+    await channel.send(BOW_DIVIDER)
+    e = discord.Embed(color=HELP_HEX)
+    e.description = ("<:xx_blank1308798611726794793:1500174266396704875>\n"
+                     "꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ\n"
+                     "<a:001heart:1494073417056649568>reαd <#1484554927794819232> before [ticket]\n"
+                     "<a:001heart:1494073417056649568> click button to mαke α ticket!")
+    e.set_footer(text="chocolα - narko mαde me!")
+    await channel.send(embed=e, view=TicketView())
+    await ctx.send("🐾 Ticket setup complete!")
+
+@bot.command()
+async def setuptips(ctx):
+    channel = bot.get_channel(TIPS_CHANNEL_ID)
+    if not channel: return
+    await channel.send(BOW_DIVIDER)
+    e = discord.Embed(color=HELP_HEX)
+    e.description = ("꣑ৎ ࣪𓈒 ͜𓈒<:1cutesy:1487225560429105275> ༝⁺໒꒱ིྀ\n"
+                     "**help <a:001heart:1494073417056649568> tips <a:001heart:1494073417056649568> αwαreness**\n"
+                     "<a:001heart:1494073417056649568>use drop down menu below")
+    await channel.send(embed=e, view=TipsView())
+    await ctx.send("🐾 Staff tips sent!")
+
 @bot.event
 async def on_ready():
-    print(f'Logged in αs {bot.user.name}')
-    # UPDATED STATUS TO Custom
     await bot.change_presence(activity=discord.CustomActivity(name="koki made me <3"))
     bot.add_view(TipsView()); bot.add_view(TicketView()); bot.add_view(CloseTicketView()); bot.add_view(GiveawayView())
     if not check_pinkie_status.is_running(): check_pinkie_status.start()
