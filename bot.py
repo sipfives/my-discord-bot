@@ -131,7 +131,12 @@ class TicketView(discord.ui.View):
         chan = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=cat, overwrites=overwrites)
         await chan.send(embed=discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX))
         await chan.send(content=f"<@&{STAFF_ROLE_ID}>", embed=discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX), view=CloseTicketView())
-        await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
+        
+        # FIXED: Added safety check for the response message
+        try:
+            await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
+        except:
+            pass
 
 class TipsView(discord.ui.View):
     def __init__(self):
@@ -273,8 +278,14 @@ async def inrole(ctx, *, role_input: str):
 async def ban(ctx, target=None, *, reason="No reason provided"):
     if not ctx.author.guild_permissions.ban_members: return
     if target is None: return await ctx.send("🐾 Please provide a User ID or mention!")
-    user_id = int(re.sub(r'\D', '', target))
-    user = await bot.fetch_user(user_id)
+    
+    # FIXED: Added safety block for Unknown User ID
+    try:
+        user_id = int(re.sub(r'\D', '', target))
+        user = await bot.fetch_user(user_id)
+    except:
+        return await ctx.send("🐾 Meow! I couldn't find a user with that ID.")
+
     dm = discord.Embed(title="<a:000kitty:1484802888122503178> Meow! You've been Banned", color=HELP_HEX)
     dm.description = f"You have been banned from **{SERVER_NAME_MOD}**"
     dm.add_field(name="🐾 Reason:", value=reason, inline=False)
@@ -283,11 +294,17 @@ async def ban(ctx, target=None, *, reason="No reason provided"):
     await ctx.guild.ban(user, reason=f"{ctx.author}: {reason}"); await ctx.send(f"🐾 **{user.name}** banned.")
 
 @bot.command()
-async def unban(ctx, user_id: int):
+async def unban(ctx, user_id=None):
     if not ctx.author.guild_permissions.ban_members: return
-    user = await bot.fetch_user(user_id)
-    await ctx.guild.unban(user)
-    await ctx.send(f"🐾 Unbanned **{user.name}**.")
+    if user_id is None: return await ctx.send("🐾 Provide an ID!")
+    
+    # FIXED: Added safety block for Unban
+    try:
+        user = await bot.fetch_user(int(user_id))
+        await ctx.guild.unban(user)
+        await ctx.send(f"🐾 Unbanned **{user.name}**.")
+    except:
+        await ctx.send("🐾 User not found in bans!")
 
 @bot.command()
 async def untimeout(ctx, member: discord.Member):
