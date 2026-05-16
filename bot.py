@@ -157,7 +157,7 @@ class TipsView(discord.ui.View):
             e2 = discord.Embed(title="002. server culture", color=HELP_HEX, description="this can (& does) apply to our rules we uphold and promote here as well; no pressuring others to pass a person around— serious guys. we don’t treat people like prostitutes. they notice when you are attempting to share them, don’t do that. you’ll ruin it for yourself and others! do not utilize another person’s information as your own— it’s rude, and not yours; we’re all here to help each other out.")
             e3 = discord.Embed(title="003. presenting your image", color=HELP_HEX, description="don’t be shy— put yourself out there! create a[n] intro, be thoughtful with information; don’t make it boring, plain or dry! this is a person’s first impression of you & factor if they reach out to you or not! we offer intro templates\nᲘ⑅𐑼 stagnating or being inactive in servers slows down your success rate of catching a person’s attention!\ninteract, have open ended convos— invite yourself in / invite others. friendly, modest & welcoming— those are the kind of things to get you noticed!\nᲘ⑅𐑼 watch your behavior avoid presenting pushy behavior early— it raises suspicion and concern avoid inserting things like “looking4edada” \"spoil me\" \"looking4owner\", you will be flagged or blacklisted for appearing as a seller / beggar. this is an SFW server. selling and begging is prohibited.")
             e4 = discord.Embed(title="004. photo choices & profile building", color=HELP_HEX, description="the world is your stage— play different characters ;3!\ndon’t limit yourself off just to one personality or one identity; have a variety!\nᲘ⑅𐑼 when looking for images, select them carefully— if you’re going to be a certain girl with certain characteristics, only choose images regarding it!\nex. girl w bangs, mid-shoulder hair, etc. (you’d only select images containing those characteristics) if you literally need to, make a pinterest board to keep track of your new personalities be mindful, none of these images are meant to be sent with an intent to sell it for a price; for the love of my ladies n tos— we do not sell here.\np.s. you have other resources, do NOT use our girls in <#1483988599337783448>!!")
-            e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or claimed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
+            e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or changed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
             embeds = [e1, e2, e3, e4, e5]
         elif selection == "awareness":
             e1 = discord.Embed(color=HELP_HEX, description="if you feel hesitant, something feel’s off/sketchy or you’certain if you’re safe; please if applicable— take the quick route and block as soon as you feel in danger.\nᲘ⑅𐑼 if severity is amped; do not hesitate to reach out and bring in administration for help; if any do not respond, follow up the chain of command (helpers to mods to admin to owners) we’re always happy to help, and we value ensuring your safety babies! if it’s just uncertainty of how to answer a dm, and no severity or harm, feel free to ask other ladies; allow yourself to be open to different perspectives and opinions! ladies if you’re responding, administration or a member, please provide advice that falls under our server’s rules and t.o.s guidelines")
@@ -416,11 +416,20 @@ async def setuptips(ctx):
     await channel.send(embed=e, view=TipsView())
     await ctx.send("🐾 Staff tips sent!")
 
+# --- UPDATED EVENT LOGIC WITH COMMAND SYNC ---
 @bot.event
 async def on_ready():
+    print(f'Logged in as {bot.user.name}')
     await bot.change_presence(activity=discord.CustomActivity(name="koki made me <3"))
+    
+    # Force Discord to register slash commands immediately
+    try:
+        synced = await bot.tree.sync()
+        print(f"Successfully synced {len(synced)} slash command(s) meow!")
+    except Exception as e:
+        print(f"Failed to sync commands: {e}")
+        
     bot.add_view(TipsView()); bot.add_view(TicketView()); bot.add_view(CloseTicketView()); bot.add_view(GiveawayView())
-    # Register the persistent dashboard view when bot turns on
     bot.add_view(EmbedDashboardView(None))
     if not check_pinkie_status.is_running(): check_pinkie_status.start()
 
@@ -440,7 +449,7 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # ==========================================
-#       NEW: DYNAMIC EMBED DASHBOARD ENGINE
+#         DYNAMIC EMBED DASHBOARD ENGINE
 # ==========================================
 DATA_PATH = "embeds.json"
 
@@ -562,7 +571,6 @@ class EmbedDashboardView(View):
 # --- COMMANDS TO RUN THE SYSTEM ---
 @bot.tree.command(name="embed", description="Manage interactive embed setups")
 async def embed_slash(interaction: discord.Interaction, action: str, name: str):
-    """Slash command syntax matching Mimu: /embed action:create name:test"""
     if not interaction.user.guild_permissions.manage_messages:
         return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
     
@@ -578,8 +586,6 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str):
 
 @bot.command()
 async def setup(ctx, embed_name: str, target_channel: discord.TextChannel = None):
-    """Usage: .setup test_name #channel
-    Pulls your layout from the file and attaches your button elements!"""
     if not ctx.author.guild_permissions.manage_messages: return
     channel = target_channel or ctx.channel
     cfg = get_embed_data(embed_name)
@@ -587,8 +593,6 @@ async def setup(ctx, embed_name: str, target_channel: discord.TextChannel = None
         return await ctx.send(f"🐾 I couldn't find an embed configuration named `{embed_name}`! Build it with `/embed` first.")
     
     final_embed = build_custom_embed(embed_name)
-    
-    # Smart binding: If the name contains 'ticket', link the ticket view. If it contains 'tips', link the tips dropdown.
     assigned_view = None
     if "ticket" in embed_name.lower(): assigned_view = TicketView()
     elif "tips" in embed_name.lower(): assigned_view = TipsView()
