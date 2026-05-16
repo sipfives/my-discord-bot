@@ -133,7 +133,6 @@ class TicketView(discord.ui.View):
         await chan.send(embed=discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX))
         await chan.send(content=f"<@&{STAFF_ROLE_ID}>", embed=discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX), view=CloseTicketView())
         
-        # FIXED: Added safety check for the response message
         try:
             await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
         except:
@@ -157,7 +156,7 @@ class TipsView(discord.ui.View):
             e2 = discord.Embed(title="002. server culture", color=HELP_HEX, description="this can (& does) apply to our rules we uphold and promote here as well; no pressuring others to pass a person around— serious guys. we don’t treat people like prostitutes. they notice when you are attempting to share them, don’t do that. you’ll ruin it for yourself and others! do not utilize another person’s information as your own— it’s rude, and not yours; we’re all here to help each other out.")
             e3 = discord.Embed(title="003. presenting your image", color=HELP_HEX, description="don’t be shy— put yourself out there! create a[n] intro, be thoughtful with information; don’t make it boring, plain or dry! this is a person’s first impression of you & factor if they reach out to you or not! we offer intro templates\nᲘ⑅𐑼 stagnating or being inactive in servers slows down your success rate of catching a person’s attention!\ninteract, have open ended convos— invite yourself in / invite others. friendly, modest & welcoming— those are the kind of things to get you noticed!\nᲘ⑅𐑼 watch your behavior avoid presenting pushy behavior early— it raises suspicion and concern avoid inserting things like “looking4edada” \"spoil me\" \"looking4owner\", you will be flagged or blacklisted for appearing as a seller / beggar. this is an SFW server. selling and begging is prohibited.")
             e4 = discord.Embed(title="004. photo choices & profile building", color=HELP_HEX, description="the world is your stage— play different characters ;3!\ndon’t limit yourself off just to one personality or one identity; have a variety!\nᲘ⑅𐑼 when looking for images, select them carefully— if you’re going to be a certain girl with certain characteristics, only choose images regarding it!\nex. girl w bangs, mid-shoulder hair, etc. (you’d only select images containing those characteristics) if you literally need to, make a pinterest board to keep track of your new personalities be mindful, none of these images are meant to be sent with an intent to sell it for a price; for the love of my ladies n tos— we do not sell here.\np.s. you have other resources, do NOT use our girls in <#1483988599337783448>!!")
-            e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or changed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
+            e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or claimed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
             embeds = [e1, e2, e3, e4, e5]
         elif selection == "awareness":
             e1 = discord.Embed(color=HELP_HEX, description="if you feel hesitant, something feel’s off/sketchy or you’certain if you’re safe; please if applicable— take the quick route and block as soon as you feel in danger.\nᲘ⑅𐑼 if severity is amped; do not hesitate to reach out and bring in administration for help; if any do not respond, follow up the chain of command (helpers to mods to admin to owners) we’re always happy to help, and we value ensuring your safety babies! if it’s just uncertainty of how to answer a dm, and no severity or harm, feel free to ask other ladies; allow yourself to be open to different perspectives and opinions! ladies if you’re responding, administration or a member, please provide advice that falls under our server’s rules and t.o.s guidelines")
@@ -280,7 +279,6 @@ async def ban(ctx, target=None, *, reason="No reason provided"):
     if not ctx.author.guild_permissions.ban_members: return
     if target is None: return await ctx.send("🐾 Please provide a User ID or mention!")
     
-    # FIXED: Added safety block for Unknown User ID
     try:
         user_id = int(re.sub(r'\D', '', target))
         user = await bot.fetch_user(user_id)
@@ -299,7 +297,6 @@ async def unban(ctx, user_id=None):
     if not ctx.author.guild_permissions.ban_members: return
     if user_id is None: return await ctx.send("🐾 Provide an ID!")
     
-    # FIXED: Added safety block for Unban
     try:
         user = await bot.fetch_user(int(user_id))
         await ctx.guild.unban(user)
@@ -416,13 +413,11 @@ async def setuptips(ctx):
     await channel.send(embed=e, view=TipsView())
     await ctx.send("🐾 Staff tips sent!")
 
-# --- UPDATED EVENT LOGIC WITH COMMAND SYNC ---
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
     await bot.change_presence(activity=discord.CustomActivity(name="koki made me <3"))
     
-    # Force Discord to register slash commands immediately
     try:
         synced = await bot.tree.sync()
         print(f"Successfully synced {len(synced)} slash command(s) meow!")
@@ -468,7 +463,9 @@ def update_embed_data(name, key, val):
 
 def build_custom_embed(name):
     cfg = get_embed_data(name)
-    if not cfg: return discord.Embed(description="*This embed has no content yet.*", color=0xCCCCCC)
+    # FIXED: Return a valid embed with standard defaults so Discord doesn't reject it as empty on creation
+    if not cfg or (not cfg.get("title") and not cfg.get("description")):
+        return discord.Embed(title="🐾 New Embed Workbench", description="Click the buttons below to customize your title, description, colors, and graphics! meow", color=0xFFD4F4)
     
     col = int(cfg.get("color", "0xFFD4F4").replace("0x", ""), 16) if cfg.get("color") else 0xFFD4F4
     emb = discord.Embed(title=cfg.get("title"), description=cfg.get("description"), color=col)
@@ -574,6 +571,9 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str):
     if not interaction.user.guild_permissions.manage_messages:
         return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
     
+    # FIXED: Added deferment so Discord doesn't issue a 3-second timeout response
+    await interaction.response.defer()
+    
     if action.lower() == "create":
         update_embed_data(name, "created", True)
         desc = (
@@ -582,7 +582,8 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str):
             f"alternatively, you can edit these individually in slash commands with `/embed edit`."
         )
         preview_emb = build_custom_embed(name)
-        await interaction.response.send_message(content=desc, embed=preview_emb, view=EmbedDashboardView(name))
+        # Using followup instead of response since the action is deferred
+        await interaction.followup.send(content=desc, embed=preview_emb, view=EmbedDashboardView(name))
 
 @bot.command()
 async def setup(ctx, embed_name: str, target_channel: discord.TextChannel = None):
