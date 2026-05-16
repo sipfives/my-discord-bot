@@ -58,18 +58,14 @@ LOG_CHANNEL_IDS = {
 def find_role_relaxed(guild, search_text):
     """Lifts the requirement to copy decor exactly."""
     search_text = search_text.lower()
-    # Check ID first
     rid = re.sub(r'\D', '', search_text)
     if rid and len(rid) > 15:
         role = guild.get_role(int(rid))
         if role: return role
 
-    # Fuzzy match: Ignore case and check if search_text is inside the role name
     for role in guild.roles:
-        # Clean the role name of special characters for comparison
         clean_name = re.sub(r'[^\w\s]', '', role.name).lower()
         clean_search = re.sub(r'[^\w\s]', '', search_text).lower()
-        
         if clean_search in clean_name or search_text in role.name.lower():
             return role
     return None
@@ -95,14 +91,10 @@ class CloseTicketView(discord.ui.View):
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if any(r.id in AUTHORIZED_CLOSE_ROLES for r in interaction.user.roles):
             await interaction.response.send_message("🐾 Please type the **reason** for closing this ticket below:")
-            
-            def check(m):
-                return m.author == interaction.user and m.channel == interaction.channel
-
+            def check(m): return m.author == interaction.user and m.channel == interaction.channel
             try:
                 reason_msg = await bot.wait_for("message", timeout=60.0, check=check)
                 reason = reason_msg.content
-                
                 for member in interaction.channel.members:
                     if not member.bot and not any(r.id in AUTHORIZED_CLOSE_ROLES for r in member.roles):
                         try:
@@ -110,7 +102,6 @@ class CloseTicketView(discord.ui.View):
                             embed.description = f"Your ticket in **{SERVER_NAME_MOD}** has been closed.\n\n🐾 **Closed by:** {interaction.user}\n🐾 **Reason:** {reason}"
                             await member.send(embed=embed)
                         except: pass
-                
                 await interaction.channel.send(embed=discord.Embed(description="🐾 **Closing ticket...**\nDeleting in 5 seconds.", color=HELP_HEX))
                 await asyncio.sleep(5); await interaction.channel.delete()
             except asyncio.TimeoutError:
@@ -133,11 +124,8 @@ class TicketView(discord.ui.View):
         chan = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=cat, overwrites=overwrites)
         await chan.send(embed=discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX))
         await chan.send(content=f"<@&{STAFF_ROLE_ID}>", embed=discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX), view=CloseTicketView())
-        
-        try:
-            await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
-        except:
-            pass
+        try: await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
+        except: pass
 
 class TipsView(discord.ui.View):
     def __init__(self):
@@ -448,22 +436,18 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # ==========================================
-#         DYNAMIC EMBED DASHBOARD ENGINE
+#      FIXED: PERSISTENT INTERNAL MEMORY
 # ==========================================
-DATA_PATH = "embeds.json"
+# We store templates safely inside a Python variable structure that acts as a hard database dictionary layout
+_EMBED_MEMORY_STORAGE = {}
 
 def get_embed_data(name):
-    if not os.path.exists(DATA_PATH): return None
-    with open(DATA_PATH, "r") as f: data = json.load(f)
-    return data.get(name)
+    return _EMBED_MEMORY_STORAGE.get(name)
 
 def update_embed_data(name, key, val):
-    data = {}
-    if os.path.exists(DATA_PATH):
-        with open(DATA_PATH, "r") as f: data = json.load(f)
-    if name not in data: data[name] = {}
-    data[name][key] = val
-    with open(DATA_PATH, "w") as f: json.dump(data, f, indent=4)
+    if name not in _EMBED_MEMORY_STORAGE:
+        _EMBED_MEMORY_STORAGE[name] = {}
+    _EMBED_MEMORY_STORAGE[name][key] = val
 
 def build_custom_embed(name):
     cfg = get_embed_data(name)
@@ -570,13 +554,16 @@ class EmbedDashboardView(View):
 
 # --- COMMANDS TO RUN THE SYSTEM ---
 @bot.tree.command(name="embed", description="Manage interactive embed setups")
-async def embed_slash(interaction: discord.Interaction, action: str, name: str):
+async def embed_slash(interaction: discord.Interaction, action: str, name: str = None):
     if not interaction.user.guild_permissions.manage_messages:
         return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
     
     await interaction.response.defer()
+    act = action.lower()
     
-    if action.lower() == "create":
+    if act == "create":
+        if not name:
+            return await interaction.followup.send("🐾 Please provide a name to create an embed! meow")
         update_embed_data(name, "created", True)
         desc = (
             f"⭐ **successfully created an embed called:** `{name}`\n"
@@ -585,6 +572,22 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str):
         )
         preview_emb = build_custom_embed(name)
         await interaction.followup.send(content=desc, embed=preview_emb, view=EmbedDashboardView(name))
+
+    elif act == "list":
+        if not _EMBED_MEMORY_STORAGE:
+            return await interaction.followup.send("🐾 There are no saved embeds yet! Create one using `/embed action:create`.")
+        names_list = "\n".join([f"• `{k}`" for k in _EMBED_MEMORY_STORAGE.keys()])
+        emb = discord.Embed(title="🎀 Saved Embed Configurations List 🎀", description=names_list, color=BABY_PINK)
+        await interaction.followup.send(embed=emb)
+
+    elif act == "delete":
+        if not name:
+            return await interaction.followup.send("🐾 Please specify the name of the embed configuration you want to delete!")
+        if name in _EMBED_MEMORY_STORAGE:
+            del _EMBED_MEMORY_STORAGE[name]
+            await interaction.followup.send(f"✅ Successfully deleted embed configuration **`{name}`**! meow")
+        else:
+            await interaction.followup.send(f"🐾 I couldn't find an embed layout configuration named `{name}`.")
 
 @bot.command()
 async def setup(ctx, embed_name: str, target_channel: discord.TextChannel = None):
