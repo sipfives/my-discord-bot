@@ -39,7 +39,7 @@ HELP_HEX = 0xFFD4F4
 BABY_PINK = 0xFFB6C1
 
 BOW_DIVIDER = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png"
-GIPHY_DIVIDER = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
+GIPHY_DIVIDER = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF1naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
 DIVIDER_3_URL = "https://media.discordapp.net/attachments/1482916170792304680/1498492959111254137/IMG_3748.gif?ex=6a09bf92&is=6a086e12&hm=9d62932fd3aa6c7f34cfde6980c73514ca87c14c2053e713fbb705469e96d488&=&width=700&height=180"
 
 assigned_by_bot = set()
@@ -58,14 +58,18 @@ LOG_CHANNEL_IDS = {
 def find_role_relaxed(guild, search_text):
     """Lifts the requirement to copy decor exactly."""
     search_text = search_text.lower()
+    # Check ID first
     rid = re.sub(r'\D', '', search_text)
     if rid and len(rid) > 15:
         role = guild.get_role(int(rid))
         if role: return role
 
+    # Fuzzy match: Ignore case and check if search_text is inside the role name
     for role in guild.roles:
+        # Clean the role name of special characters for comparison
         clean_name = re.sub(r'[^\w\s]', '', role.name).lower()
         clean_search = re.sub(r'[^\w\s]', '', search_text).lower()
+        
         if clean_search in clean_name or search_text in role.name.lower():
             return role
     return None
@@ -91,10 +95,14 @@ class CloseTicketView(discord.ui.View):
     async def close_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         if any(r.id in AUTHORIZED_CLOSE_ROLES for r in interaction.user.roles):
             await interaction.response.send_message("🐾 Please type the **reason** for closing this ticket below:")
-            def check(m): return m.author == interaction.user and m.channel == interaction.channel
+            
+            def check(m):
+                return m.author == interaction.user and m.channel == interaction.channel
+
             try:
                 reason_msg = await bot.wait_for("message", timeout=60.0, check=check)
                 reason = reason_msg.content
+                
                 for member in interaction.channel.members:
                     if not member.bot and not any(r.id in AUTHORIZED_CLOSE_ROLES for r in member.roles):
                         try:
@@ -102,6 +110,7 @@ class CloseTicketView(discord.ui.View):
                             embed.description = f"Your ticket in **{SERVER_NAME_MOD}** has been closed.\n\n🐾 **Closed by:** {interaction.user}\n🐾 **Reason:** {reason}"
                             await member.send(embed=embed)
                         except: pass
+                
                 await interaction.channel.send(embed=discord.Embed(description="🐾 **Closing ticket...**\nDeleting in 5 seconds.", color=HELP_HEX))
                 await asyncio.sleep(5); await interaction.channel.delete()
             except asyncio.TimeoutError:
@@ -124,8 +133,11 @@ class TicketView(discord.ui.View):
         chan = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=cat, overwrites=overwrites)
         await chan.send(embed=discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX))
         await chan.send(content=f"<@&{STAFF_ROLE_ID}>", embed=discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX), view=CloseTicketView())
-        try: await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
-        except: pass
+        
+        try:
+            await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
+        except:
+            pass
 
 class TipsView(discord.ui.View):
     def __init__(self):
@@ -438,7 +450,6 @@ async def on_message(message):
 # ==========================================
 #      FIXED: PERSISTENT INTERNAL MEMORY
 # ==========================================
-# We store templates safely inside a Python variable structure that acts as a hard database dictionary layout
 _EMBED_MEMORY_STORAGE = {}
 
 def get_embed_data(name):
@@ -558,6 +569,7 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str =
     if not interaction.user.guild_permissions.manage_messages:
         return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
     
+    # FIXED: Defer the interaction immediately to give the bot breathing room
     await interaction.response.defer()
     act = action.lower()
     
@@ -571,6 +583,7 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str =
             f"alternatively, you can edit these individually in slash commands with `/embed edit`."
         )
         preview_emb = build_custom_embed(name)
+        # FIXED: Using meetup logic follow-ups instead of response strings
         await interaction.followup.send(content=desc, embed=preview_emb, view=EmbedDashboardView(name))
 
     elif act == "list":
