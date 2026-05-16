@@ -7,7 +7,8 @@ import datetime
 import time
 import re
 import aiohttp
-from discord.ui import Button, View
+import json
+from discord.ui import Button, View, Modal, TextInput
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -419,6 +420,8 @@ async def setuptips(ctx):
 async def on_ready():
     await bot.change_presence(activity=discord.CustomActivity(name="koki made me <3"))
     bot.add_view(TipsView()); bot.add_view(TicketView()); bot.add_view(CloseTicketView()); bot.add_view(GiveawayView())
+    # Register the persistent dashboard view when bot turns on
+    bot.add_view(EmbedDashboardView(None))
     if not check_pinkie_status.is_running(): check_pinkie_status.start()
 
 @bot.event
@@ -435,6 +438,163 @@ async def on_message(message):
         target = cid if cid in LOG_CHANNEL_IDS else pid
         await message.channel.send(LOG_CHANNEL_IDS[target])
     await bot.process_commands(message)
+
+# ==========================================
+#       NEW: DYNAMIC EMBED DASHBOARD ENGINE
+# ==========================================
+DATA_PATH = "embeds.json"
+
+def get_embed_data(name):
+    if not os.path.exists(DATA_PATH): return None
+    with open(DATA_PATH, "r") as f: data = json.load(f)
+    return data.get(name)
+
+def update_embed_data(name, key, val):
+    data = {}
+    if os.path.exists(DATA_PATH):
+        with open(DATA_PATH, "r") as f: data = json.load(f)
+    if name not in data: data[name] = {}
+    data[name][key] = val
+    with open(DATA_PATH, "w") as f: json.dump(data, f, indent=4)
+
+def build_custom_embed(name):
+    cfg = get_embed_data(name)
+    if not cfg: return discord.Embed(description="*This embed has no content yet.*", color=0xCCCCCC)
+    
+    col = int(cfg.get("color", "0xFFD4F4").replace("0x", ""), 16) if cfg.get("color") else 0xFFD4F4
+    emb = discord.Embed(title=cfg.get("title"), description=cfg.get("description"), color=col)
+    
+    if cfg.get("author_name"):
+        emb.set_author(name=cfg["author_name"], icon_url=cfg.get("author_icon"))
+    if cfg.get("footer_text"):
+        emb.set_footer(text=cfg["footer_text"], icon_url=cfg.get("footer_icon"))
+    if cfg.get("image"): emb.set_image(url=cfg["image"])
+    if cfg.get("thumbnail"): emb.set_thumbnail(url=cfg["thumbnail"])
+    return emb
+
+class BasicInfoModal(Modal):
+    def __init__(self, embed_name):
+        super().__init__(title=f"Editing Basic Info: {embed_name}")
+        self.embed_name = embed_name
+        cfg = get_embed_data(embed_name) or {}
+        self.title_input = TextInput(label="Title", default=cfg.get("title", ""), required=False, placeholder="Enter embed title...")
+        self.desc_input = TextInput(label="Description", style=discord.TextStyle.long, default=cfg.get("description", ""), required=False, placeholder="Enter main description...")
+        self.color_input = TextInput(label="Hex Color", default=cfg.get("color", "0xFFD4F4"), required=False, placeholder="e.g. 0xFFD4F4")
+        self.add_item(self.title_input); self.add_item(self.desc_input); self.add_item(self.color_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        update_embed_data(self.embed_name, "title", self.title_input.value)
+        update_embed_data(self.embed_name, "description", self.desc_input.value)
+        update_embed_data(self.embed_name, "color", self.color_input.value)
+        await interaction.response.edit_message(embed=build_custom_embed(self.embed_name), view=EmbedDashboardView(self.embed_name))
+
+class AuthorModal(Modal):
+    def __init__(self, embed_name):
+        super().__init__(title=f"Editing Author: {embed_name}")
+        self.embed_name = embed_name
+        cfg = get_embed_data(embed_name) or {}
+        self.auth_name = TextInput(label="Author Name", default=cfg.get("author_name", ""), required=False)
+        self.auth_icon = TextInput(label="Author Icon URL", default=cfg.get("author_icon", ""), required=False)
+        self.add_item(self.auth_name); self.add_item(self.auth_icon)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        update_embed_data(self.embed_name, "author_name", self.auth_name.value)
+        update_embed_data(self.embed_name, "author_icon", self.auth_icon.value)
+        await interaction.response.edit_message(embed=build_custom_embed(self.embed_name), view=EmbedDashboardView(self.embed_name))
+
+class FooterModal(Modal):
+    def __init__(self, embed_name):
+        super().__init__(title=f"Editing Footer: {embed_name}")
+        self.embed_name = embed_name
+        cfg = get_embed_data(embed_name) or {}
+        self.foot_text = TextInput(label="Footer Text", default=cfg.get("footer_text", ""), required=False)
+        self.foot_icon = TextInput(label="Footer Icon URL", default=cfg.get("footer_icon", ""), required=False)
+        self.add_item(self.foot_text); self.add_item(self.foot_icon)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        update_embed_data(self.embed_name, "footer_text", self.foot_text.value)
+        update_embed_data(self.embed_name, "footer_icon", self.foot_icon.value)
+        await interaction.response.edit_message(embed=build_custom_embed(self.embed_name), view=EmbedDashboardView(self.embed_name))
+
+class ImagesModal(Modal):
+    def __init__(self, embed_name):
+        super().__init__(title=f"Editing Images: {embed_name}")
+        self.embed_name = embed_name
+        cfg = get_embed_data(embed_name) or {}
+        self.main_img = TextInput(label="Main Image URL", default=cfg.get("image", ""), required=False)
+        self.thumb_img = TextInput(label="Thumbnail URL", default=cfg.get("thumbnail", ""), required=False)
+        self.add_item(self.main_img); self.add_item(self.thumb_img)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        update_embed_data(self.embed_name, "image", self.main_img.value)
+        update_embed_data(self.embed_name, "thumbnail", self.thumb_img.value)
+        await interaction.response.edit_message(embed=build_custom_embed(self.embed_name), view=EmbedDashboardView(self.embed_name))
+
+class EmbedDashboardView(View):
+    def __init__(self, embed_name):
+        super().__init__(timeout=None)
+        self.embed_name = embed_name
+
+    @discord.ui.button(label="edit basic information (color / title / description)", style=discord.ButtonStyle.gray, custom_id="dash_edit_basic")
+    async def edit_basic(self, interaction: discord.Interaction, button: Button):
+        if not interaction.user.guild_permissions.manage_messages:
+            return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
+        await interaction.response.send_modal(BasicInfoModal(self.embed_name))
+
+    @discord.ui.button(label="edit author", style=discord.ButtonStyle.gray, custom_id="dash_edit_author")
+    async def edit_author(self, interaction: discord.Interaction, button: Button):
+        if not interaction.user.guild_permissions.manage_messages:
+            return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
+        await interaction.response.send_modal(AuthorModal(self.embed_name))
+
+    @discord.ui.button(label="edit footer", style=discord.ButtonStyle.gray, custom_id="dash_edit_footer")
+    async def edit_footer(self, interaction: discord.Interaction, button: Button):
+        if not interaction.user.guild_permissions.manage_messages:
+            return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
+        await interaction.response.send_modal(FooterModal(self.embed_name))
+
+    @discord.ui.button(label="edit images", style=discord.ButtonStyle.gray, custom_id="dash_edit_images")
+    async def edit_images(self, interaction: discord.Interaction, button: Button):
+        if not interaction.user.guild_permissions.manage_messages:
+            return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
+        await interaction.response.send_modal(ImagesModal(self.embed_name))
+
+# --- COMMANDS TO RUN THE SYSTEM ---
+@bot.tree.command(name="embed", description="Manage interactive embed setups")
+async def embed_slash(interaction: discord.Interaction, action: str, name: str):
+    """Slash command syntax matching Mimu: /embed action:create name:test"""
+    if not interaction.user.guild_permissions.manage_messages:
+        return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
+    
+    if action.lower() == "create":
+        update_embed_data(name, "created", True)
+        desc = (
+            f"⭐ **successfully created an embed called:** `{name}`\n"
+            f"please select from the buttons below for what you'd like to edit!\n"
+            f"alternatively, you can edit these individually in slash commands with `/embed edit`."
+        )
+        preview_emb = build_custom_embed(name)
+        await interaction.response.send_message(content=desc, embed=preview_emb, view=EmbedDashboardView(name))
+
+@bot.command()
+async def setup(ctx, embed_name: str, target_channel: discord.TextChannel = None):
+    """Usage: .setup test_name #channel
+    Pulls your layout from the file and attaches your button elements!"""
+    if not ctx.author.guild_permissions.manage_messages: return
+    channel = target_channel or ctx.channel
+    cfg = get_embed_data(embed_name)
+    if not cfg:
+        return await ctx.send(f"🐾 I couldn't find an embed configuration named `{embed_name}`! Build it with `/embed` first.")
+    
+    final_embed = build_custom_embed(embed_name)
+    
+    # Smart binding: If the name contains 'ticket', link the ticket view. If it contains 'tips', link the tips dropdown.
+    assigned_view = None
+    if "ticket" in embed_name.lower(): assigned_view = TicketView()
+    elif "tips" in embed_name.lower(): assigned_view = TipsView()
+    
+    await channel.send(embed=final_embed, view=assigned_view)
+    await ctx.send(f"🐾 Custom embed `{embed_name}` posted smoothly to {channel.mention}!")
 
 token = os.environ.get('DISCORD_TOKEN')
 if token: bot.run(token)
