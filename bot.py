@@ -40,6 +40,7 @@ BABY_PINK = 0xFFB6C1
 
 BOW_DIVIDER = "https://media.discordapp.net/attachments/1483878740105887984/1500204166486823076/ffffdiv.png"
 GIPHY_DIVIDER = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExem4yZ3o2OTB1ZnNldm54YnduczJzaHV3cHZpZ3R0MHM4bzdtaDIyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/briNJuauNDIpnvidKl/giphy.gif"
+DIVIDER_3_URL = "https://media.discordapp.net/attachments/1482916170792304680/1498492959111254137/IMG_3748.gif?ex=6a09bf92&is=6a086e12&hm=9d62932fd3aa6c7f34cfde6980c73514ca87c14c2053e713fbb705469e96d488&=&width=700&height=180"
 
 assigned_by_bot = set()
 
@@ -191,7 +192,7 @@ async def check_pinkie_status():
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(title="🎀 **chocolα's help menu** 🎀", color=BABY_PINK)
-    embed.add_field(name="🐾 **General**", value="`.help` | `.purge` | `.setup_ticket` | `.setuptips` | `.testboost` | `.div` ", inline=False)
+    embed.add_field(name="🐾 **General**", value="`.help` | `.purge` | `.setup_ticket` | `.setuptips` | `.testboost` | `.div` | `.div3` ", inline=False)
     embed.add_field(name="🎁 **Events**", value="`.giveaway [time] [winners] [prize]` | `.reroll [msg_id]` ", inline=False)
     embed.add_field(name="🔨 **Moderation**", value="`.ban [user_id]` | `.unban [user_id]` | `.kick` | `.timeout` | `.untimeout` | `.role` | `.inrole` ", inline=False)
     embed.add_field(name="🖼️ **Profile**", value="`.av` | `.sav` | `.banner` | `.sbanner` | `.guildbanner` ", inline=False)
@@ -367,7 +368,7 @@ async def banner(ctx, member: discord.Member = None):
 
 @bot.command()
 async def sbanner(ctx):
-    if not ctx.guild.banner: return await ctx.send("🐾 No server banner!")
+    if not ctx.guild.banner: return await ctx.send("🐾 This server doesn't have a banner!")
     await ctx.send(embed=discord.Embed(title=f"🐾 {ctx.guild.name}'s Banner", color=BABY_PINK).set_image(url=ctx.guild.banner.url))
 
 @bot.command()
@@ -386,6 +387,9 @@ async def testboost(ctx):
 
 @bot.command()
 async def div(ctx): await ctx.send(GIPHY_DIVIDER)
+
+@bot.command()
+async def div3(ctx): await ctx.send(DIVIDER_3_URL)
 
 @bot.command()
 async def setup_ticket(ctx):
@@ -463,7 +467,6 @@ def update_embed_data(name, key, val):
 
 def build_custom_embed(name):
     cfg = get_embed_data(name)
-    # FIXED: Return a valid embed with standard defaults so Discord doesn't reject it as empty on creation
     if not cfg or (not cfg.get("title") and not cfg.get("description")):
         return discord.Embed(title="🐾 New Embed Workbench", description="Click the buttons below to customize your title, description, colors, and graphics! meow", color=0xFFD4F4)
     
@@ -571,7 +574,6 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str):
     if not interaction.user.guild_permissions.manage_messages:
         return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
     
-    # FIXED: Added deferment so Discord doesn't issue a 3-second timeout response
     await interaction.response.defer()
     
     if action.lower() == "create":
@@ -582,7 +584,6 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str):
             f"alternatively, you can edit these individually in slash commands with `/embed edit`."
         )
         preview_emb = build_custom_embed(name)
-        # Using followup instead of response since the action is deferred
         await interaction.followup.send(content=desc, embed=preview_emb, view=EmbedDashboardView(name))
 
 @bot.command()
