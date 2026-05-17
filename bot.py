@@ -626,7 +626,7 @@ class TicketReasonModal(Modal):
         # FIXED: Reason is now perfectly layered inside the description space of Embed 1
         e1 = discord.Embed(
             title="🐾 help needed!",
-            description=f"Hi {user.mention}!\n\n**issue:** {reason_value}",
+            description=f"Hi {user.mention}!\n\n**reason for opening ticket:** {reason_value}",
             color=HELP_HEX
         )
         await chan.send(embed=e1)
