@@ -117,27 +117,58 @@ class CloseTicketView(discord.ui.View):
                 await interaction.channel.send("🐾 Close request timed out. Click the button to try again!")
         else: await interaction.response.send_message("🐾 Sorry, only staff can close tickets! meow", ephemeral=True)
 
-class TicketView(discord.ui.View):
+# --- NEW: TICKET REASON FORM POPUP (MIMU STYLE) ---
+class TicketReasonModal(Modal):
     def __init__(self):
-        super().__init__(timeout=None)
-    @discord.ui.button(label="create ticket", style=discord.ButtonStyle.gray, emoji="<a:00_pusheenwork:1485859767543926804>", custom_id="create_ticket_btn")
-    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        guild, cat = interaction.guild, interaction.guild.get_channel(TICKET_CATEGORY_ID)
+        super().__init__(title="Opening a Ticket")
+        self.reason_input = TextInput(
+            label="state your reasoning for issue.",
+            style=discord.TextStyle.long,
+            placeholder="Type your reason here...",
+            required=True,
+            max_length=500
+        )
+        self.add_item(self.reason_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
+        cat = guild.get_channel(TICKET_CATEGORY_ID)
         staff_role = guild.get_role(STAFF_ROLE_ID)
+        
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
             guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
-        if staff_role: overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
+        if staff_role: 
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
+            
         chan = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=cat, overwrites=overwrites)
-        await chan.send(embed=discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX))
-        await chan.send(content=f"<@&{STAFF_ROLE_ID}>", embed=discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX), view=CloseTicketView())
+        
+        # Embed 1: Matches your image updates perfectly
+        e1 = discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX)
+        await chan.send(embed=e1)
+        
+        # Send raw text containing the reason from the form card right behind it
+        await chan.send(content=f"issue: {self.reason_input.value}")
+        
+        # Embed 2: Pings your helper role perfectly
+        e2 = discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX)
+        await chan.send(content="<@&1483887906031669278>", embed=e2, view=CloseTicketView())
         
         try:
-            await interaction.response.send_message(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
+            await interaction.followup.send(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
         except:
             pass
+
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    @discord.ui.button(label="create ticket", style=discord.ButtonStyle.gray, emoji="<a:00_pusheenwork:1485859767543926804>", custom_id="create_ticket_btn")
+    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Swept out old auto-creation to launch the beautiful form popup window instead
+        await interaction.response.send_modal(TicketReasonModal())
 
 class TipsView(discord.ui.View):
     def __init__(self):
@@ -448,7 +479,7 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # ==========================================
-#      FIXED: PERSISTENT INTERNAL MEMORY
+#         PERSISTENT INTERNAL MEMORY
 # ==========================================
 _EMBED_MEMORY_STORAGE = {}
 
@@ -569,7 +600,6 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str =
     if not interaction.user.guild_permissions.manage_messages:
         return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
     
-    # FIXED: Defer the interaction immediately to give the bot breathing room
     await interaction.response.defer()
     act = action.lower()
     
@@ -583,7 +613,6 @@ async def embed_slash(interaction: discord.Interaction, action: str, name: str =
             f"alternatively, you can edit these individually in slash commands with `/embed edit`."
         )
         preview_emb = build_custom_embed(name)
-        # FIXED: Using meetup logic follow-ups instead of response strings
         await interaction.followup.send(content=desc, embed=preview_emb, view=EmbedDashboardView(name))
 
     elif act == "list":
