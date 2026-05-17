@@ -49,24 +49,16 @@ CLEAN_CHANNEL_IDS = {
     1483988599337783448: "catfishing = ban <3"
 }
 
-LOG_CHANNEL_IDS = {
-    1499948539424411863: GIPHY_DIVIDER,
-    1499947145296351242: GIPHY_DIVIDER
-}
-
 # --- HELPER: RELAXED SEARCH ---
 def find_role_relaxed(guild, search_text):
     """Lifts the requirement to copy decor exactly."""
     search_text = search_text.lower()
-    # Check ID first
     rid = re.sub(r'\D', '', search_text)
     if rid and len(rid) > 15:
         role = guild.get_role(int(rid))
         if role: return role
 
-    # Fuzzy match: Ignore case and check if search_text is inside the role name
     for role in guild.roles:
-        # Clean the role name of special characters for comparison
         clean_name = re.sub(r'[^\w\s]', '', role.name).lower()
         clean_search = re.sub(r'[^\w\s]', '', search_text).lower()
         
@@ -117,7 +109,7 @@ class CloseTicketView(discord.ui.View):
                 await interaction.channel.send("🐾 Close request timed out. Click the button to try again!")
         else: await interaction.response.send_message("🐾 Sorry, only staff can close tickets! meow", ephemeral=True)
 
-# --- FIXED: TICKET REASON FORM POPUP (HIGH-SPEED THREAD SAFE) ---
+# --- TICKET REASON FORM POPUP (EMBED TRACK SAFE) ---
 class TicketReasonModal(Modal):
     def __init__(self):
         super().__init__(title="Opening a Ticket")
@@ -131,14 +123,12 @@ class TicketReasonModal(Modal):
         self.add_item(self.reason_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # FIXED: Instantly defer the interaction globally to smash the strict 3-second timer
         await interaction.response.defer(thinking=True, ephemeral=True)
         
         guild = interaction.guild
         user = interaction.user
         reason_value = self.reason_input.value
         
-        # Pull configurations safely
         cat = guild.get_channel(TICKET_CATEGORY_ID)
         staff_role = guild.get_role(STAFF_ROLE_ID)
         
@@ -150,22 +140,21 @@ class TicketReasonModal(Modal):
         if staff_role: 
             overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
             
-        # Create channel smoothly behind the scenes
         chan = await guild.create_text_channel(name=f"ticket-{user.name}", category=cat, overwrites=overwrites)
         
-        # Embed 1 Layout assembly
-        e1 = discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {user.mention}! Explain your issue.", color=HELP_HEX)
+        # FIXED: Reason is now perfectly layered inside the description of Embed 1
+        e1 = discord.Embed(
+            title="🐾 help needed for ekitten",
+            description=f"Hi {user.mention}! Explain your issue.\n\n**issue:** {reason_value}",
+            color=HELP_HEX
+        )
         await chan.send(embed=e1)
         
-        # Send raw user input reasoning text under the first card
-        await chan.send(content=f"issue: {reason_value}")
-        
-        # Embed 2 Layout with specific Helper role ping
+        # Embed 2 with your Helper role ping
         e2 = discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX)
         await chan.send(content="<@&1483887906031669278>", embed=e2, view=CloseTicketView())
         
         try:
-            # Send completion confirmation to follow-up channel lines
             await interaction.followup.send(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
         except:
             pass
@@ -600,6 +589,89 @@ class EmbedDashboardView(View):
         if not interaction.user.guild_permissions.manage_messages:
             return await interaction.response.send_message("🐾 Staff only! meow", ephemeral=True)
         await interaction.response.send_modal(ImagesModal(self.embed_name))
+
+# --- TICKET REASON FORM POPUP (EMBED TRACK SAFE) ---
+class TicketReasonModal(Modal):
+    def __init__(self):
+        super().__init__(title="Opening a Ticket")
+        self.reason_input = TextInput(
+            label="state your reasoning for issue.",
+            style=discord.TextStyle.long,
+            placeholder="Type your reason here...",
+            required=True,
+            max_length=500
+        )
+        self.add_item(self.reason_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        
+        guild = interaction.guild
+        user = interaction.user
+        reason_value = self.reason_input.value
+        
+        cat = guild.get_channel(TICKET_CATEGORY_ID)
+        staff_role = guild.get_role(STAFF_ROLE_ID)
+        
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True)
+        }
+        if staff_role: 
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True)
+            
+        chan = await guild.create_text_channel(name=f"ticket-{user.name}", category=cat, overwrites=overwrites)
+        
+        # FIXED: Reason is now perfectly layered inside the description space of Embed 1
+        e1 = discord.Embed(
+            title="🐾 help needed for {user.mention}!",
+            description=f"Hi {user.mention}!\n\n**issue:** {reason_value}",
+            color=HELP_HEX
+        )
+        await chan.send(embed=e1)
+        
+        # Embed 2 with your customized Helper role ping
+        e2 = discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX)
+        await chan.send(content="<@&1483887906031669278>", embed=e2, view=CloseTicketView())
+        
+        try:
+            await interaction.followup.send(f"🐾 Ticket opened! {chan.mention}", ephemeral=True)
+        except:
+            pass
+
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    @discord.ui.button(label="create ticket", style=discord.ButtonStyle.gray, emoji="<a:00_pusheenwork:1485859767543926804>", custom_id="create_ticket_btn")
+    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(TicketReasonModal())
+
+class TipsView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    @discord.ui.select(placeholder="click me!", custom_id="tips_dropdown", options=[discord.SelectOption(label="help", emoji="<a:1cutesy:1499882522685870100>"), discord.SelectOption(label="tips", emoji="<a:1cutesy:1499882522685870100>"), discord.SelectOption(label="awareness", emoji="<a:1cutesy:1499882522685870100>")])
+    async def select_callback(self, interaction, select):
+        selection = select.values[0]
+        embeds = []
+        if selection == "help":
+            e1 = discord.Embed(title="profile set up!", color=HELP_HEX, description="your profile is the first thing that attracts anybody! we urge you all to stay AWAY from profiles that are suggestive, or look \"ageplayer\" like. you will be banned, not just from our server, but others. pick a modest, colorful, gothic, cute core, or decent profile picture, depending on your personality type! (you can find profile inspo in [vanity](https://discord.com/channels/1483873672208056511/1499947145296351242) and [persona](https://discord.com/channels/1483873672208056511/1499948539424411863))")
+            e2 = discord.Embed(title="finding servers", color=HELP_HEX, description="we specifically target ask2dm servers, as they have a wide variety of people. we recommend you keep your dms turned on and allow server dms to recieve dms. we provide servers in <#1483873673692581982>\n\nonce you join these servers, complete set up and head over to the intros channels they provide and paste an intro!\n\nonce done, head over to their ask-to-dm channels and send a message. the message must include gender, age, and any extra message after (optional)\nformat f(age) dms open for anything!")
+            e3 = discord.Embed(title="finding the right person", color=HELP_HEX, description="you may get multiple dms. it is heavily suggested that you do not open all at once! your account will be flagged for spam and you won't be able to accept message requests! finding the right person may be hard, but keep your chin up! never respond to any NSFW messages asking you to show anything inappropriate, or anything suggesting you show anything inappropriate \"for a price.\" block them. if so!")
+            e4 = discord.Embed(title="getting the bag!", color=HELP_HEX, description="this will take some time! results arent fast. in order to receive payments, its recommended that you request they pay via gift cards if you do not want to give them your personal pay accounts. you can use cash app, paypal, zelle, etc! if you don't have USD, you can use gift cards as well!\n\nsend an amazon link to whatever gift card you prefer!")
+            embeds = [e1, e2, e3, e4]
+        elif selection == "tips":
+            e1 = discord.Embed(title="001 digital footprint & safety", color=HELP_HEX, description="be mindful— do not share your full legal name, number, address, school/workplace it is highly recommended that you use multitudes of various accounts, social media(s), email(s), and payment method(s) turn off location tags on your photo(s) when sending pictures one (only when it’s yours!) avoid presenting yourself into constant availability (appearing reachable 24/7), avoid using your own face if you are a MINOR (-18)\ndecide and set your own boundaries early on, and stick by them (t.o.s & <#1483875248083439719> still apply.) be vigilant! you’re smart girls— do not click suspicious payment links, or any in general— period.")
+            e2 = discord.Embed(title="002. server culture", color=HELP_HEX, description="this can (& does) apply to our rules we uphold and promote here as well; no pressuring others to pass a person around— serious guys. we don’t treat people like prostitutes. they notice when you are attempting to share them, don’t do that. you’ll ruin it for yourself and others! do not utilize another person’s information as your own— it’s rude, and not yours; we’re all here to help each other out.")
+            e3 = discord.Embed(title="003. presenting your image", color=HELP_HEX, description="don’t be shy— put yourself out there! create a[n] intro, be thoughtful with information; don’t make it boring, plain or dry! this is a person’s first impression of you & factor if they reach out to you or not! we offer intro templates\nᲘ⑅𐑼 stagnating or being inactive in servers slows down your success rate of catching a person’s attention!\ninteract, have open ended convos— invite yourself in / invite others. friendly, modest & welcoming— those are the kind of things to get you noticed!\nᲘ⑅𐑼 watch your behavior avoid presenting pushy behavior early— it raises suspicion and concern avoid inserting things like “looking4edada” \"spoil me\" \"looking4owner\", you will be flagged or blacklisted for appearing as a seller / beggar. this is an SFW server. selling and begging is prohibited.")
+            e4 = discord.Embed(title="004. photo choices & profile building", color=HELP_HEX, description="the world is your stage— play different characters ;3!\ndon’t limit yourself off just to one personality or one identity; have a variety!\nᲘ⑅𐑼 when looking for images, select them carefully— if you’re going to be a certain girl with certain characteristics, only choose images regarding it!\nex. girl w bangs, mid-shoulder hair, etc. (you’d only select images containing those characteristics) if you literally need to, make a pinterest board to keep track of your new personalities be mindful, none of these images are meant to be sent with an intent to sell it for a price; for the love of my ladies n tos— we do not sell here.\np.s. you have other resources, do NOT use our girls in <#1483988599337783448>!!")
+            e5 = discord.Embed(title="005. patience is the one that pays ;3", color=HELP_HEX, description="yes, there is waiting and down time. let them find you through your intro— don’t be discouraged!\ndon’t attempt to rush the process. this process is meant to be slow and gradual. talk to them, get to know them more, make closure and build trust. just because you saw some lucky girl get it quicker than you or claimed to not put in much work, doesn’t mean it’s like that for everyone. chances are it will/may be 2-3 weeks you are taking to a guy before you receive anything. as long as you uphold your patience, you can make a bag successfully hehe!")
+            embeds = [e1, e2, e3, e4, e5]
+        elif selection == "awareness":
+            e1 = discord.Embed(color=HELP_HEX, description="if you feel hesitant, something feel’s off/sketchy or you’certain if you’re safe; please if applicable— take the quick route and block as soon as you feel in danger.\nᲘ⑅𐑼 if severity is amped; do not hesitate to reach out and bring in administration for help; if any do not respond, follow up the chain of command (helpers to mods to admin to owners) we’re always happy to help, and we value ensuring your safety babies! if it’s just uncertainty of how to answer a dm, and no severity or harm, feel free to ask other ladies; allow yourself to be open to different perspectives and opinions! ladies if you’re responding, administration or a member, please provide advice that falls under our server’s rules and t.o.s guidelines")
+            e2 = discord.Embed(color=HELP_HEX, description="anybody who urges you to click α link, join α call, download an app, or give your password is trying to scam you or steal your information. be mindful.\nstay away from new accounts, anybody who claims to be α 'sugardaddy,' or anyone who wants you to pay first before receiving any type of payment!")
+            embeds = [e1, e2]
+        await interaction.response.send_message(embeds=embeds, ephemeral=True)
 
 # --- COMMANDS TO RUN THE SYSTEM ---
 @bot.tree.command(name="embed", description="Manage interactive embed setups")
