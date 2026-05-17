@@ -117,7 +117,7 @@ class CloseTicketView(discord.ui.View):
                 await interaction.channel.send("🐾 Close request timed out. Click the button to try again!")
         else: await interaction.response.send_message("🐾 Sorry, only staff can close tickets! meow", ephemeral=True)
 
-# --- NEW: TICKET REASON FORM POPUP (MIMU STYLE) ---
+# --- TICKET REASON FORM POPUP (LOCK ENGINE) ---
 class TicketReasonModal(Modal):
     def __init__(self):
         super().__init__(title="Opening a Ticket")
@@ -131,7 +131,10 @@ class TicketReasonModal(Modal):
         self.add_item(self.reason_input)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # 1. The bot defers the response first so it doesn't give a timeout error
         await interaction.response.defer(ephemeral=True)
+        
+        # 2. Channel generation ONLY fires here, meaning they MUST hit Submit to get a room
         guild = interaction.guild
         cat = guild.get_channel(TICKET_CATEGORY_ID)
         staff_role = guild.get_role(STAFF_ROLE_ID)
@@ -146,14 +149,14 @@ class TicketReasonModal(Modal):
             
         chan = await guild.create_text_channel(name=f"ticket-{interaction.user.name}", category=cat, overwrites=overwrites)
         
-        # Embed 1: Matches your image updates perfectly
+        # Embed 1 Layout from your image request
         e1 = discord.Embed(description=f"🐾 **help needed for ekitten**\nHi {interaction.user.mention}! Explain your issue.", color=HELP_HEX)
         await chan.send(embed=e1)
         
-        # Send raw text containing the reason from the form card right behind it
+        # Spits out the issue description raw text underneath card 1
         await chan.send(content=f"issue: {self.reason_input.value}")
         
-        # Embed 2: Pings your helper role perfectly
+        # Embed 2 with your customized Helper role ping
         e2 = discord.Embed(description="α helper will be here shortly! meow", color=HELP_HEX)
         await chan.send(content="<@&1483887906031669278>", embed=e2, view=CloseTicketView())
         
@@ -167,7 +170,7 @@ class TicketView(discord.ui.View):
         super().__init__(timeout=None)
     @discord.ui.button(label="create ticket", style=discord.ButtonStyle.gray, emoji="<a:00_pusheenwork:1485859767543926804>", custom_id="create_ticket_btn")
     async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Swept out old auto-creation to launch the beautiful form popup window instead
+        # Simply prompts the form popup card on screen without opening any empty channel lines
         await interaction.response.send_modal(TicketReasonModal())
 
 class TipsView(discord.ui.View):
